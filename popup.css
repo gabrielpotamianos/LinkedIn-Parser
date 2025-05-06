@@ -9,7 +9,8 @@
     --accent: var(--primary);
     --success: #28a745;
     --danger: #e74c3c;
-    --accent-dark: #1260b0;
+    --danger-dark: #e74c3c;
+    --accent-dark: var(--primary);
   }
   
   [data-theme="dark"] {
@@ -18,6 +19,7 @@
     --text: #e0e0e0;
     --input-bg: rgba(255,255,255,0.1);
     --accent: #ffcc00;
+    --danger-dark: #cf4436;
     --accent-dark: #cca500;
   }
   
@@ -211,12 +213,12 @@
   }
   
   #run-btn {
-    background: var(--success);
+    background: var(--accent-dark);
     color: #fff;
   }
   
   #logout-btn {
-    background: var(--danger);
+    background: var(--danger-dark);
     color: #fff;
   }
   

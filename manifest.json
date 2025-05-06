@@ -5,10 +5,12 @@
     "description": "Parse candidate LinkedIn data and send it to API after login.",
     "permissions": [
       "storage",
-      "scripting"
+      "scripting",
+      "tabs"
     ],
     "host_permissions": [
-      "http://localhost:3000/*"
+      "http://localhost:3000/*",
+      "https://www.linkedin.com/*"
     ],
     "background": {
       "service_worker": "background.js"
