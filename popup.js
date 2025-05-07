@@ -137,18 +137,25 @@ async function initPopup() {
     });
   });
 
-  // HANDLE PARSED DATA
-  chrome.runtime.onMessage.addListener(async msg => {
-    if (msg.type === 'PARSED_DATA') {
-      const { token, userId } = await chrome.storage.local.get(['token','userId']);
-      try {
-        await api.saveProfile(token, userId, msg.data);
-        console.log('Profile saved');
-      } catch (e) {
-        console.error('Error saving profile:', e);
-      }
+// HANDLE PARSED DATA via backend parsing
+chrome.runtime.onMessage.addListener(async msg => {
+  if (msg.type === 'PARSED_DATA') {
+    const profile = msg.data;
+    console.log('Received parsed profile:', profile);
+
+    // Save to backend
+    const { token, userId } = await chrome.storage.local.get(['token','userId']);
+    try {
+      await api.saveProfile(token, userId, profile);
+      console.log('✅ Profile saved to DB');
+      // Optionally show a toast or UI feedback
+      ui.showToast('Profile saved successfully');
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      ui.showToast('Error saving profile', 'danger');
     }
-  });
+  }
+});
 }
 
 document.addEventListener('DOMContentLoaded', initPopup);
