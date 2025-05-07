@@ -1,186 +1,204 @@
 // content.js - LinkedIn Profile Parser with skills navigation
 (async () => {
-  const cleanText = text => text ? text.replace(/\s+/g, ' ').trim() : '';
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  /**
+   * Collapse consecutive whitespace in a string and trim ends.
+   * @param {string} t — raw text (may contain line breaks, extra spaces)
+   * @returns {string} cleaned, single-spaced text
+   */
+  const clean = (t = '') => t.replace(/\s+/g, ' ').trim();
+
+  /**
+   * Query the DOM for a selector and return its cleaned innerText.
+   * @param {string} sel — CSS selector for target element
+   * @returns {string} cleaned text content, or '' if not found
+   */
+  const text = (sel) => clean(document.querySelector(sel)?.innerText || '');
+
+  /**
+   * Wait until an element matching `sel` appears in the DOM or timeout elapses.
+   * Used to pause execution after clicking "see more" or "load more".
+   * @param {string} sel — CSS selector to wait for
+   * @param {number} ms — maximum wait time in ms
+   * @returns {Promise<void>}
+   */
+  const waitFor = (sel, ms = 1000) => new Promise((res) => {
+    const obs = new MutationObserver((_, o) => {
+      if (document.querySelector(sel)) {
+        clearTimeout(timer);
+        o.disconnect();
+        res();
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    const timer = setTimeout(() => { obs.disconnect(); res(); }, ms);
+  });
+
+  /**
+   * Generic function to parse a list section of the profile.
+   * - Finds the section by ID, ensures it's in a <section> block.
+   * - Grabs all direct <li> items under its first <ul>.
+   * - Filters out any nested sub-component items (e.g. endorsements, nested roles).
+   * - Calls mapFn on each <li> to transform into data objects.
+   *
+   * @param {string} sectionId — e.g. '#experience' or '#education'
+   * @param {Function} mapFn — transforms an <li> element into an array of data objects
+   * @returns {Array} flattened array of results from mapFn
+   */
+  const parseList = (sectionId, mapFn) => {
+    const section = document.querySelector(sectionId)?.closest('section');
+    if (!section) return [];
+    return Array.from(section.querySelectorAll('ul > li'))
+      .filter(li => !li.closest('.pvs-entity__sub-components'))
+      .flatMap(mapFn);
+  };
+
+  // ── Build profile object ─────────────────────────────────────────────────
 
   const profile = {
-    url: window.location.href.split('?')[0],
-    fullName: cleanText(document.querySelector('.inline.t-24.v-align-middle.break-words')?.innerText || ''),
-    headline: cleanText(document.querySelector('.text-body-medium.break-words')?.innerText || ''),
-    location: cleanText(document.querySelector('.text-body-small.inline.t-black--light.break-words')?.innerText || ''),
+    url: window.location.href.split('?')[0],               // Base profile URL
+    fullName: text('.inline.t-24.v-align-middle.break-words'),
+    headline: text('.text-body-medium.break-words'),
+    location: text('.text-body-small.inline.t-black--light.break-words'),
     about: '',
-    current: cleanText(document.querySelector('div.text-body-medium.break-words')?.innerText || ''),
-    education: [],
     experience: [],
+    education: [],
     skills: []
   };
 
+  // ── About ─────────────────────────────────────────────────────────────────
 
-  // 1. Locate the About anchor and its enclosing section
-  const aboutAnchor = document.querySelector('#about');
-  if (!aboutAnchor) {
-    console.warn('No About section found');
-  }
-  else { 
-    const aboutSection = aboutAnchor.closest('section');
-    if (!aboutSection) {
-      console.warn('About anchor not within a section');
-      return;
+  profile.about = (() => {
+    // Locate the About section anchor and its containing <section>
+    const sec = document.querySelector('#about')?.closest('section');
+    if (!sec) {
+      console.warn('No About section found');
+      return '';
     }
+    // Some profiles hide long text behind "see more"
+    const more = sec.querySelector('div[class*="inline-show-more-text"]');
+    // Try the expanded hidden span first, fallback to visible container
+    const el = more?.querySelector('span[aria-hidden="true"]')
+             ?? sec.querySelector('div.display-flex.ph5.pv3 span[aria-hidden="true"]');
+    return clean(el?.innerText || '');
+  })();
 
-    // 2. Expand the text if a "see more" button exists
-    const collapseDiv = aboutSection.querySelector('div[class*="inline-show-more-text"]');
+  // ── Experience ────────────────────────────────────────────────────────────
 
-    // 3. Extract the full About text
-    // First, try the expanded span within the collapsed container
-    let descEl = collapseDiv?.querySelector('span[aria-hidden="true"]');
-    if (!descEl) {
-      // Fallback: generic visible span under the content area
-      descEl = aboutSection.querySelector('div.display-flex.ph5.pv3 span[aria-hidden="true"]');
-    }
-    profile.about = cleanText(descEl?.innerText || '');
-  }
-
-// Experience parsing
-const expSection = document.querySelector('#experience')?.closest('section');
-if (!expSection) {
-  console.warn('No experience section found');
-} else {
-  // Grab all <li> under the main list...
-  const allLis = Array.from(expSection.querySelectorAll('ul > li'));
-  // …then filter out any that are inside a `.pvs-entity__sub-components`
-  const topLevelLis = allLis.filter(li => !li.closest('.pvs-entity__sub-components'));
-
-  topLevelLis.forEach(li => {
-    // Common selectors
+  // Parse each top-level job entry or subgrouped roles
+  profile.experience = parseList('#experience', (li) => {
     const roleSel = '.mr1 span[aria-hidden="true"]';
     const compSel = 'span.t-14.t-normal span[aria-hidden="true"]';
     const dateSel = '.pvs-entity__caption-wrapper';
 
-    // Detect nested roles: sub-components list
-    const subComp   = li.querySelector('.pvs-entity__sub-components ul');
-    const roleElems = li.querySelectorAll(roleSel);
+    // Nested roles live under this sub-list container
+    const sub = li.querySelector('.pvs-entity__sub-components ul');
+    const roles = li.querySelectorAll(roleSel);
 
-    if (subComp && roleElems.length > 1) {
-      // Multi-role: first roleSel is the company name
-      const compText = cleanText(roleElems[0]?.innerText || '');
-        const [companyName, employmentType] = compText.includes('·')
-          ? compText.split('·').map(s => s.trim())
-          : [compText, ''];
-      subComp.querySelectorAll('li').forEach(roleLi => {
-        const title = cleanText(roleLi.querySelector(roleSel)?.innerText || '');
-        const date  = cleanText(roleLi.querySelector(dateSel)?.innerText || '');
-        const combined = `${title} ${companyName} ${date}`.toLowerCase();
-        if (title && companyName && !/helped me.*job/i.test(combined)) {
-          profile.experience.push({ title, company: companyName, employmentType, date });
-        }
-      });
-    } else {
-      // Single-role
-      const title   = cleanText(li.querySelector(roleSel)?.innerText || '');
-      const compText = cleanText(li.querySelector(compSel)?.innerText || '');
-      const [company, employmentType] = compText.includes('·')
+    /**
+     * Build a single experience record.
+     * Splits "Company · Type" into two fields and ensures we don't capture boilerplate.
+     */
+    const makeRecord = (title, compText, date) => {
+      const [company, type = ''] = compText.includes('·')
         ? compText.split('·').map(s => s.trim())
-        : [compText, ''];
-      const date    = cleanText(li.querySelector(dateSel)?.innerText || '');
-      const combined = `${title} ${company} ${date}`.toLowerCase();
-      if (title && company && !/helped me.*job/i.test(combined)) {
-        profile.experience.push({ title, company, employmentType, date });
+        : [compText];
+      const comb = `${title} ${company} ${date}`.toLowerCase();
+      if (title && company && !/helped me.*job/i.test(comb)) {
+        return { title, company, employmentType: type, date };
       }
+      return null;
+    };
+
+    if (sub && roles.length > 1) {
+      // Multiple roles at the same company—first role element is company info
+      const compText = clean(roles[0]?.innerText || '');
+      return Array.from(sub.querySelectorAll('li'))
+        .map(subLi => {
+          const title = clean(subLi.querySelector(roleSel)?.innerText);
+          const date = clean(subLi.querySelector(dateSel)?.innerText);
+          return makeRecord(title, compText, date);
+        })
+        .filter(Boolean);
+    } else {
+      // Single-role entry
+      const title = clean(li.querySelector(roleSel)?.innerText);
+      const compText = clean(li.querySelector(compSel)?.innerText);
+      const date = clean(li.querySelector(dateSel)?.innerText);
+      const rec = makeRecord(title, compText, date);
+      return rec ? [rec] : [];
     }
   });
-}
 
+  // ── Education ─────────────────────────────────────────────────────────────
 
-// Education parsing
-const eduSection = document.querySelector('#education')?.closest('section');
-if (eduSection) {
-  // grab all <li>s under the main education list…
-  const allLis = Array.from(
-    eduSection.closest('section').querySelectorAll('ul > li')
-  );
-  // …then filter out any that live inside a nested sub-components block
-  const topLevelLis = allLis.filter(li => !li.closest('.pvs-entity__sub-components'));
-
-  topLevelLis.forEach(li => {
-    const school    = cleanText(li.querySelector('.mr1 span[aria-hidden="true"]')?.innerText || '');
-    const degree    = cleanText(li.querySelector('.t-14.t-normal span[aria-hidden="true"]')?.innerText || '');
-    const dateRange = cleanText(li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]')?.innerText || '');
-
-    // Pull any descriptive text under this school block
+  // Extract school name, degree, date range, and optional description
+  profile.education = parseList('#education', (li) => {
+    const school    = clean(li.querySelector('.mr1 span[aria-hidden="true"]')?.innerText);
+    const degree    = clean(li.querySelector('.t-14.t-normal span[aria-hidden="true"]')?.innerText);
+    const dateRange = clean(li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]')?.innerText);
     let description = '';
-    const descContainer = li.querySelector('.pvs-entity__sub-components');
-    if (descContainer) {
-      description = cleanText(descContainer.innerText);
-    }
-
-    profile.education.push({ school, degree, dateRange, description });
+    const descEl = li.querySelector('.pvs-entity__sub-components');
+    if (descEl) description = clean(descEl.innerText);
+    return [{ school, degree, dateRange, description }];
   });
-}
 
-async function scrapeSkills(cleanText) {
-  // 1. Expand “Show all skills”
-  const seeMoreAnchor = document.querySelector(
+  // ── Skills ────────────────────────────────────────────────────────────────
+
+  /**
+   * Clicks through "Show all" and "Load more" in the Skills section and
+   * then collects each skill name, filters out headings/endorsement counts,
+   * and deduplicates them.
+   */
+async function scrapeSkills() {
+  const seeAll = document.querySelector(
     'a[id^="navigation-index-Show-all"][href*="details/skills"]'
   );
-  if (seeMoreAnchor) {
-    seeMoreAnchor.click();
-  }
+  if (seeAll) seeAll.click();
 
-  // 2. Wait for any skill chip to appear
-  await waitForSelector(
-    '.pv-skill-category-entity__name-text, .pv-skill-entity__skill-name, .pv-skill-entity__name-text',
-    2000
+  // Wait for the first batch of skill labels to appear
+  await waitFor(
+    '.pv-skill-category-entity__name-text, .pv-skill-entity__skill-name, .pv-skill-entity__name-text'
   );
 
-  // 3. Load more results if present
-  const loadMoreBtn = document.querySelector('button.scaffold-finite-scroll__load-button');
-  if (loadMoreBtn) {
-    loadMoreBtn.click();
-    await waitForSelector(
-      '.pv-skill-category-entity__name-text, .pv-skill-entity__skill-name, .pv-skill-entity__name-text',
-      2000
+  // Keep clicking “Load more” until the button disappears
+  let loadMore;
+  do {
+    loadMore = document.querySelector(
+      'button.scaffold-finite-scroll__load-button'
     );
-  }
+    if (loadMore) {
+      loadMore.click();
+      // Wait again for new items to render
+      await waitFor(
+        '.pv-skill-category-entity__name-text, .pv-skill-entity__skill-name, .pv-skill-entity__name-text'
+      );
+    }
+  } while (loadMore);
 
-  const skillLis = Array.from(
+  // Now collect every skill on the page
+  const items = Array.from(
     document.querySelectorAll('li.pvs-list__paged-list-item')
   );
-  
-  const skills = skillLis
-    .map(li => {
-      const span = li.querySelector(
-        '.mr1.hoverable-link-text.t-bold span[aria-hidden="true"]'
-      );
-      return span ? cleanText(span.innerText) : '';
-    })
-    .filter(s => s && !/^Skills|Endorsed|\d+$|others?$/i.test(s));
-  
-  const uniqueSkills = Array.from(new Set(skills));
+  const skills = items
+    .map((li) =>
+      clean(
+        li.querySelector(
+          '.mr1.hoverable-link-text.t-bold span[aria-hidden="true"]'
+        )?.innerText
+      )
+    )
+    .filter((s) => s && !/^Skills|Endorsed|\d+$|others?$/i.test(s));
 
-  return uniqueSkills;
+  return Array.from(new Set(skills));
 }
 
-// Utility: wait until `selector` matches at least one element, or `timeout` ms elapses
-function waitForSelector(selector, timeout = 2000) {
-  return new Promise(resolve => {
-    const observer = new MutationObserver((_, obs) => {
-      if (document.querySelector(selector)) {
-        clearTimeout(timer);
-        obs.disconnect();
-        resolve();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    const timer = setTimeout(() => {
-      observer.disconnect();
-      resolve();
-    }, timeout);
-  });
-}
+  profile.skills = await scrapeSkills();
 
-  profile.skills = await scrapeSkills(cleanText)
+  // ── Emit & Persist ───────────────────────────────────────────────────────
 
   chrome.runtime.sendMessage({ type: 'PARSED_DATA', data: profile });
   sessionStorage.setItem('profileData', JSON.stringify(profile));
-  window.history.back()
+  window.history.back();
 })();
