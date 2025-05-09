@@ -1,6 +1,10 @@
-// ui.js
+/**
+ * Module for managing authentication UI state and interactions,
+ * including form input handling, tab navigation, authentication state syncing,
+ * feedback messages, and dynamic UI element visibility.
+ */
 
-// form selectors (adjust IDs if necessary)
+ // Element References
 const emailLogin    = document.getElementById('email-login');
 const passLogin     = document.getElementById('pass-login');
 const loginErr      = document.getElementById('login-error');
@@ -17,49 +21,83 @@ const formRegister  = document.getElementById('form-register');
 const authSection   = document.getElementById('auth-section');
 const appSection    = document.getElementById('app-section');
 
-/** Clear login inputs & errors */
+ // Utility Functions
+
+/**
+ * Clears the login form inputs and error messages.
+ */
 export function clearLoginForm() {
   emailLogin.value = '';
-  passLogin.value  = '';
+  passLogin.value = '';
   loginErr.textContent = '';
 }
 
-/** Clear register inputs, errors & messages */
+/**
+ * Clears the register form inputs, error messages, and any success messages.
+ */
 export function clearRegisterForm() {
   emailRegister.value = '';
-  passRegister.value  = '';
-  passConfirm.value   = '';
+  passRegister.value = '';
+  passConfirm.value = '';
   registerErr.textContent = '';
   const msg = document.querySelector('.success-message');
   if (msg) msg.remove();
 }
 
-/** Show/hide sign-in vs register tabs */
+ // Tab Navigation
+
+/**
+ * Sets up event listeners for the login and register tabs to toggle visibility
+ * and clear form inputs and errors when switching tabs.
+ */
 export function setupTabs() {
   tabLogin.addEventListener('click', () => {
-    tabLogin.classList.add('active');   tabRegister.classList.remove('active');
-    formLogin.classList.remove('hidden'); formRegister.classList.add('hidden');
-    clearLoginForm(); clearRegisterForm();
+    tabLogin.classList.add('active');
+    tabRegister.classList.remove('active');
+    formLogin.classList.remove('hidden');
+    formRegister.classList.add('hidden');
+    clearLoginForm();
+    clearRegisterForm();
   });
   tabRegister.addEventListener('click', () => {
-    tabRegister.classList.add('active');   tabLogin.classList.remove('active');
-    formRegister.classList.remove('hidden'); formLogin.classList.add('hidden');
-    clearLoginForm(); clearRegisterForm();
+    tabRegister.classList.add('active');
+    tabLogin.classList.remove('active');
+    formRegister.classList.remove('hidden');
+    formLogin.classList.add('hidden');
+    clearLoginForm();
+    clearRegisterForm();
   });
 }
 
-/** Toggle auth/app sections based on token existence */
+ // Authentication UI Sync
+
+/**
+ * Synchronizes the authentication UI based on the presence of an authentication token.
+ * Shows the app section if authenticated, otherwise shows the auth section.
+ * Clears form inputs and errors when switching.
+ * @returns {Promise<void>}
+ */
 export async function syncAuthUI() {
   const { token } = await chrome.storage.local.get('token');
   if (token) {
-    clearLoginForm(); clearRegisterForm();
-    authSection.classList.add('hidden'); appSection.classList.remove('hidden');
+    clearLoginForm();
+    clearRegisterForm();
+    authSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
   } else {
-    authSection.classList.remove('hidden'); appSection.classList.add('hidden');
+    authSection.classList.remove('hidden');
+    appSection.classList.add('hidden');
   }
 }
 
-/** Show a dynamic success message under a button */
+ // Feedback Messages
+
+/**
+ * Displays a dynamic success message immediately after a specified button element.
+ * @param {HTMLElement} button - The button element after which the message will be inserted.
+ * @param {string} text - The success message text to display.
+ * @returns {HTMLElement} The created success message element.
+ */
 export function showSuccessMessage(button, text) {
   const msg = document.createElement('div');
   msg.className = 'success-message';
@@ -68,18 +106,22 @@ export function showSuccessMessage(button, text) {
   return msg;
 }
 
+ // Parse Button Visibility
+
 /**
- * Toggle Parse button visibility based on active tab URL
+ * Updates the visibility of the Parse button based on whether the active tab URL
+ * matches a LinkedIn profile URL pattern.
+ * @param {HTMLElement} runBtn - The Parse button element to show or hide.
+ * @returns {Promise<void>}
  */
-export async function updateParseVisibility(runBtn) {
+export async function updateParseButtonVisibility(runBtn) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tab?.url || '';
   let isProfile = false;
   try {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
-    isProfile = (host === 'www.linkedin.com' || host === 'linkedin.com')
-                && u.pathname.startsWith('/in/');
+    isProfile = (host === 'www.linkedin.com' || host === 'linkedin.com') && u.pathname.startsWith('/in/');
   } catch {
     // invalid URL
   }

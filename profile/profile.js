@@ -1,6 +1,24 @@
 // profile/profile.js
 import * as themes from "../shared/themes.js";
 
+/** 
+ * =========================
+ *        Utilities
+ * =========================
+ */
+
+/**
+ * Helper methods for DOM creation and animation.
+ */
+
+/**
+ * Animates typing text into an input element with a delay between characters.
+ * If window.skipAnimations is true, sets the text immediately.
+ * @param {HTMLInputElement} el - The input element to animate.
+ * @param {string} text - The text to type into the input.
+ * @param {number} [delay=50] - Delay in milliseconds between each character.
+ * @returns {Promise<void>} Resolves when animation completes.
+ */
 function typeWriter(el, text, delay = 50) {
   return new Promise((resolve) => {
     if (window.skipAnimations) {
@@ -20,6 +38,12 @@ function typeWriter(el, text, delay = 50) {
   });
 }
 
+/**
+ * Creates a read-only text input element with optional class and initial value.
+ * @param {string} [className=""] - CSS class to assign to the input.
+ * @param {string} [value=""] - Initial value of the input.
+ * @returns {HTMLInputElement} The created read-only input element.
+ */
 function createReadOnlyInput(className = "", value = "") {
   const input = document.createElement("input");
   input.type = "text";
@@ -29,6 +53,16 @@ function createReadOnlyInput(className = "", value = "") {
   return input;
 }
 
+/**
+ * Creates a read-only input with specified text, appends it to a container,
+ * and pushes its typing animation promise into the animations array.
+ * Note: This both appends an input element and schedules its animation.
+ * @param {HTMLElement} container - The container to append the input to.
+ * @param {string} className - CSS class for the input.
+ * @param {string} text - Text to animate inside the input.
+ * @param {Array<Promise>} animations - Array to collect animation promises.
+ * @returns {HTMLInputElement} The created input element.
+ */
 function animateInput(container, className, text, animations) {
   const input = createReadOnlyInput(className);
   container.appendChild(input);
@@ -36,7 +70,23 @@ function animateInput(container, className, text, animations) {
   return input;
 }
 
+/** 
+ * =========================
+ *        Rendering
+ * =========================
+ * Builds and animates all profile sections in parallel
+ */
+
+/**
+ * Renders the profile data into the DOM, animating text inputs.
+ * Sets up animations for URL, full name, headline, location, about,
+ * experience, education, and skills sections.
+ * Also attaches event listeners for save and discard buttons before awaiting animations.
+ * @param {Object} profileData - Profile data object containing various fields.
+ * @returns {Promise<void>} Resolves when all animations complete.
+ */
 async function renderProfile(profileData) {
+  // Helper to animate element by ID if it exists
   const animate = (id, val) => {
     const el = document.getElementById(id);
     return el ? typeWriter(el, val || "") : Promise.resolve();
@@ -50,6 +100,7 @@ async function renderProfile(profileData) {
     animate("about", profileData.about),
   ];
 
+  // Loop through each work experience entry, create inputs, and queue their animations
   const expContainer = document.getElementById("experience");
   expContainer.innerHTML = "";
   if (Array.isArray(profileData.experience) && profileData.experience.length) {
@@ -84,6 +135,7 @@ async function renderProfile(profileData) {
     expContainer.appendChild(placeholder);
   }
 
+  // Populate education entries similarly with animated inputs
   const eduContainer = document.getElementById("education");
   eduContainer.innerHTML = "";
   if (Array.isArray(profileData.education) && profileData.education.length) {
@@ -104,6 +156,7 @@ async function renderProfile(profileData) {
     eduContainer.appendChild(input);
   }
 
+  // Animate the skills list into the textarea
   const skillsEl = document.getElementById("skills");
   if (skillsEl) {
     animations.push(
@@ -113,6 +166,13 @@ async function renderProfile(profileData) {
       )
     );
   }
+
+  /** 
+   * =========================
+   *     Event Listeners
+   * =========================
+   * Buttons are wired early to allow interruption of animations
+   */
 
   document
     .getElementById("save-candidate-btn")
@@ -131,10 +191,16 @@ async function renderProfile(profileData) {
   await Promise.all(animations);
 }
 
-chrome.runtime.onMessage.addListener(async(msg) => {
+/**
+ * Listens for runtime messages and triggers rendering for SAVE_PROFILE type.
+ */
+chrome.runtime.onMessage.addListener(async (msg) => {
   if (msg.type === "SAVE_PROFILE") await renderProfile(msg.data);
 });
 
+/**
+ * On page load, initialize theme and render stored profile
+ */
 document.addEventListener("DOMContentLoaded", async () => {
   await themes.initTheme();
   themes.setupThemeToggle();

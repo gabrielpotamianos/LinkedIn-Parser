@@ -1,0 +1,28 @@
+{
+  "name": "extension",
+  "version": "1.0.0",
+  "description": "This project is meant to create a Chrome extension that can be used to parse relevant data of a LinkedIn profile for easier management of Talent Acquisition",
+  "main": "background.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielpotamianos/LinkedIn-Parser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gabrielpotamianos/LinkedIn-Parser/issues"
+  },
+  "homepage": "https://github.com/gabrielpotamianos/LinkedIn-Parser#readme",
+  "devDependencies": {
+    "jest": "^27.5.1",
+    "jest-chrome": "^0.8.0",
+    "jest-environment-jsdom": "^27.5.1"
+  }
+}

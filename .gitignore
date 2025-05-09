@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# dotenv environment variables file
+.env
+
+# optional npm cache
+.npm
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+coverage/

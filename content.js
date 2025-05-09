@@ -1,49 +1,62 @@
-// content.js - LinkedIn Profile Parser with skills navigation
-(async () => {
-  // ── Helpers ──────────────────────────────────────────────────────────────
+/**
+ * Content script for LinkedIn profile data parsing.
+ *
+ * This module scrapes profile information including About, Experience,
+ * Education, and Skills sections from the DOM. It handles expanding
+ * hidden content, paginating skill lists, and deduplicating skill entries.
+ *
+ * Dependencies:
+ * - Chrome extension APIs (chrome.storage, chrome.runtime)
+ * - DOM APIs for querying and mutation observation
+ *
+ * Execution Context:
+ * Runs as an immediately invoked async function in the context of a LinkedIn
+ * profile page.
+ */
 
-  function setStorage(obj) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set(obj, resolve);
-    });
-  }
+(async () => {
+  // ── UTILITIES ────────────────────────────────────────────────────────────────
 
   /**
    * Collapse consecutive whitespace in a string and trim ends.
-   * @param {string} t — raw text (may contain line breaks, extra spaces)
-   * @returns {string} cleaned, single-spaced text
+   * @param {string} t - Raw text (may contain line breaks, extra spaces).
+   * @returns {string} Cleaned, single-spaced text.
    */
   const clean = (t = "") => t.replace(/\s+/g, " ").trim();
 
   /**
    * Query the DOM for a selector and return its cleaned innerText.
-   * @param {string} sel — CSS selector for target element
-   * @returns {string} cleaned text content, or '' if not found
+   * @param {string} sel - CSS selector for target element.
+   * @returns {string} Cleaned text content, or empty string if not found.
    */
   const text = (sel) => clean(document.querySelector(sel)?.innerText || "");
 
   /**
    * Wait until an element matching `sel` appears in the DOM or timeout elapses.
    * Used to pause execution after clicking "see more" or "load more".
-   * @param {string} sel — CSS selector to wait for
-   * @param {number} ms — maximum wait time in ms
-   * @returns {Promise<void>}
+   * @param {string} sel - CSS selector to wait for.
+   * @param {number} ms - Maximum wait time in milliseconds.
+   * @returns {Promise<void>} Resolves when element appears or timeout.
    */
   const waitFor = (sel, ms = 2000) =>
     new Promise((res) => {
-      const obs = new MutationObserver((_, o) => {
+      const observer = new MutationObserver((_, obs) => {
         if (document.querySelector(sel)) {
           clearTimeout(timer);
-          o.disconnect();
+          obs.disconnect();
           res();
         }
       });
-      obs.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true });
       const timer = setTimeout(() => {
-        obs.disconnect();
+        observer.disconnect();
         res();
       }, ms);
     });
+
+  // ── SECTION PARSERS ──────────────────────────────────────────────────────────
+
+  // Generic list section parser
 
   /**
    * Generic function to parse a list section of the profile.
@@ -52,9 +65,9 @@
    * - Filters out any nested sub-component items (e.g. endorsements, nested roles).
    * - Calls mapFn on each <li> to transform into data objects.
    *
-   * @param {string} sectionId — e.g. '#experience' or '#education'
-   * @param {Function} mapFn — transforms an <li> element into an array of data objects
-   * @returns {Array} flattened array of results from mapFn
+   * @param {string} sectionId - e.g. '#experience' or '#education'.
+   * @param {Function} mapFn - Transforms an <li> element into an array of data objects.
+   * @returns {Array} Flattened array of results from mapFn.
    */
   const parseList = (sectionId, mapFn) => {
     const section = document.querySelector(sectionId)?.closest("section");
@@ -64,87 +77,112 @@
       .flatMap(mapFn);
   };
 
-  // ── Build profile object ─────────────────────────────────────────────────
+  // ── ABOUT EXTRACTION ─────────────────────────────────────────────────────────
+
+  // Extract and clean About section, with see-more expansion
+
+  /**
+   * Extract the About section text, expanding "see more" if present.
+   * @returns {string} Cleaned About text or empty string if not found.
+   */
+  const aboutText = (() => {
+    // Locate the About section anchor and its containing <section>
+    const aboutSection = document.querySelector("#about")?.closest("section");
+    
+    // Some profiles hide long text behind "see more"
+    const moreToggle = aboutSection.querySelector(
+      'div[class*="inline-show-more-text"]'
+    );
+    // Try to get the expanded hidden span first, fallback to visible container
+    const textElement =
+      moreToggle?.querySelector('span[aria-hidden="true"]') ??
+      aboutSection.querySelector(
+        'div.display-flex.ph5.pv3 span[aria-hidden="true"]'
+      );
+    return clean(textElement?.innerText || "");
+  })();
+
+  // ── EXPERIENCE EXTRACTION ─────────────────────────────────────────────────────
+
+  // Parse Experience entries
+
+  /**
+   * Build a single experience record.
+   * @param {string} title - Job title.
+   * @param {string} compText - Company and employment type text.
+   * @param {string} date - Date range string.
+   * @returns {Object|null} Experience record with fields:
+   *  - title: string
+   *  - company: string
+   *  - employmentType: string (may be empty)
+   *  - date: string
+   *  Returns null if invalid or boilerplate.
+   */
+  const makeRecord = (title, compText, date) => {
+    const [company, type = ""] = compText.includes("·")
+      ? compText.split("·").map((s) => s.trim())
+      : [compText];
+    const combinedText = `${title} ${company} ${date}`.toLowerCase();
+    // Filter out boilerplate phrases like "helped me... job"
+    if (title && company && !/helped me.*job/i.test(combinedText)) {
+      return { title, company, employmentType: type, date };
+    }
+    return null;
+  };
+
+  // ── EDUCATION EXTRACTION ──────────────────────────────────────────────────────
+
+  // Parse Education entries
 
   const profile = {
     url: window.location.href.split("?")[0], // Base profile URL
     fullName: text(".inline.t-24.v-align-middle.break-words"),
     headline: text(".text-body-medium.break-words"),
     location: text(".text-body-small.inline.t-black--light.break-words"),
-    about: "",
+    about: aboutText,
     experience: [],
     education: [],
     skills: [],
   };
 
-  // ── About ─────────────────────────────────────────────────────────────────
-
-  profile.about = (() => {
-    // Locate the About section anchor and its containing <section>
-    const sec = document.querySelector("#about")?.closest("section");
-    if (!sec) {
-      console.warn("No About section found");
-      return "";
-    }
-    // Some profiles hide long text behind "see more"
-    const more = sec.querySelector('div[class*="inline-show-more-text"]');
-    // Try the expanded hidden span first, fallback to visible container
-    const el =
-      more?.querySelector('span[aria-hidden="true"]') ??
-      sec.querySelector('div.display-flex.ph5.pv3 span[aria-hidden="true"]');
-    return clean(el?.innerText || "");
-  })();
-
-  // ── Experience ────────────────────────────────────────────────────────────
-
-  // Parse each top-level job entry or subgrouped roles
+  /**
+   * Parse each top-level job entry or subgrouped roles into experience records.
+   * @returns {Array<Object>} Array of experience objects.
+   */
   profile.experience = parseList("#experience", (li) => {
-    const roleSel = '.mr1 span[aria-hidden="true"]';
-    const compSel = 'span.t-14.t-normal span[aria-hidden="true"]';
-    const dateSel = ".pvs-entity__caption-wrapper";
+    const roleSelector = '.mr1 span[aria-hidden="true"]';
+    const companySelector = 'span.t-14.t-normal span[aria-hidden="true"]';
+    const dateSelector = ".pvs-entity__caption-wrapper";
 
     // Nested roles live under this sub-list container
-    const sub = li.querySelector(".pvs-entity__sub-components ul");
-    const roles = li.querySelectorAll(roleSel);
+    const nestedList = li.querySelector(".pvs-entity__sub-components ul");
+    const roles = li.querySelectorAll(roleSelector);
 
-    /**
-     * Build a single experience record.
-     * Splits "Company · Type" into two fields and ensures we don't capture boilerplate.
-     */
-    const makeRecord = (title, compText, date) => {
-      const [company, type = ""] = compText.includes("·")
-        ? compText.split("·").map((s) => s.trim())
-        : [compText];
-      const comb = `${title} ${company} ${date}`.toLowerCase();
-      if (title && company && !/helped me.*job/i.test(comb)) {
-        return { title, company, employmentType: type, date };
-      }
-      return null;
-    };
-
-    if (sub && roles.length > 1) {
-      // Multiple roles at the same company—first role element is company info
+    if (nestedList && roles.length > 1) {
+      // Multiple roles at the same company — first role element is company info
       const compText = clean(roles[0]?.innerText || "");
-      return Array.from(sub.querySelectorAll("li"))
+      // Map each nested role into an experience record
+      return Array.from(nestedList.querySelectorAll("li"))
         .map((subLi) => {
-          const title = clean(subLi.querySelector(roleSel)?.innerText);
-          const date = clean(subLi.querySelector(dateSel)?.innerText);
+          const title = clean(subLi.querySelector(roleSelector)?.innerText);
+          const date = clean(subLi.querySelector(dateSelector)?.innerText);
           return makeRecord(title, compText, date);
         })
         .filter(Boolean);
     } else {
       // Single-role entry
-      const title = clean(li.querySelector(roleSel)?.innerText);
-      const compText = clean(li.querySelector(compSel)?.innerText);
-      const date = clean(li.querySelector(dateSel)?.innerText);
-      const rec = makeRecord(title, compText, date);
-      return rec ? [rec] : [];
+      const title = clean(li.querySelector(roleSelector)?.innerText);
+      const compText = clean(li.querySelector(companySelector)?.innerText);
+      const date = clean(li.querySelector(dateSelector)?.innerText);
+      const record = makeRecord(title, compText, date);
+      return record ? [record] : [];
     }
   });
 
-  // ── Education ─────────────────────────────────────────────────────────────
-
-  // Extract school name, degree, date range, and optional description
+  /**
+   * Extract school name, degree, date range, and optional description from education entries.
+   * @returns {Array<Object>} Array of education objects.
+   */
   profile.education = parseList("#education", (li) => {
     const school = clean(
       li.querySelector('.mr1 span[aria-hidden="true"]')?.innerText
@@ -162,18 +200,22 @@
     return [{ school, degree, dateRange, description }];
   });
 
-  // ── Skills ────────────────────────────────────────────────────────────────
+  // ── SKILLS EXTRACTION ────────────────────────────────────────────────────────
+
+  // Click through and collect all skills, deduplicating results
 
   /**
    * Clicks through "Show all" and "Load more" in the Skills section and
    * then collects each skill name, filters out headings/endorsement counts,
    * and deduplicates them.
+   * @returns {Promise<Array<string>>} Array of unique skill names.
    */
   async function scrapeSkills() {
+    // Expand "Show all" skills link if present
     const seeAll = document.querySelector(
       'a[id^="navigation-index-Show-all"][href*="details/skills"]'
     );
-    let skillEls = [];
+    let skillElements = [];
     if (seeAll) {
       // Expand and page through all skills
       seeAll.click();
@@ -181,60 +223,72 @@
         ".pv-skill-category-entity__name-text, .pv-skill-entity__skill-name",
         2000
       );
-      let loadMore;
+      // Paginate "Load more" buttons until none remain
+      let loadMoreButton;
       do {
-        loadMore = document.querySelector(
+        loadMoreButton = document.querySelector(
           "button.scaffold-finite-scroll__load-button"
         );
-        if (loadMore) {
-          loadMore.click();
+        if (loadMoreButton) {
+          loadMoreButton.click();
           await waitFor(
             ".pv-skill-category-entity__name-text, .pv-skill-entity__skill-name",
             2000
           );
         }
-      } while (loadMore);
-      // Collect all list-item elements
-      skillEls = Array.from(
+      } while (loadMoreButton);
+      // Collect all list-item elements after pagination
+      skillElements = Array.from(
         document.querySelectorAll("li.pvs-list__paged-list-item")
       );
     } else {
       // Fallback: wait for and parse any skills under the Skills card
-      await waitFor('#skills ul > li', 2000);
-      skillEls = parseList('#skills', li => li);
+      await waitFor("#skills ul > li", 2000);
+      skillElements = parseList("#skills", (li) => li);
     }
 
-    // Extract text, filter out headers/counts, and dedupe
+    // Extract skill text, filter out headers/counts, and deduplicate
     const skills = Array.from(
       new Set(
-        skillEls
-          .map(li => {
-            const span =
+        skillElements
+          .map((li) => {
+            const skillNameSpan =
               li.querySelector(
                 '.mr1.hoverable-link-text.t-bold span[aria-hidden="true"]'
               ) || li.querySelector('span[aria-hidden="true"]');
-            return span ? clean(span.innerText) : '';
+            return skillNameSpan ? clean(skillNameSpan.innerText) : "";
           })
-          .filter(s => s && !/^Skills|Endorsed|\d+$|others?$/i.test(s))
+          .filter((s) => s && !/^Skills|Endorsed|\d+$|others?$/i.test(s))
       )
     );
     return skills;
   }
 
-  // kick off your scrape
-  scrapeSkills()
-    .then(async(skills) => {
-      profile.skills = skills;
-      await chrome.storage.local.set({profileData: profile})
+  // ── MAIN EXECUTION ───────────────────────────────────────────────────────────
 
+  /**
+   * Orchestrates scraping, storage, messaging, and cleanup.
+   */
+  scrapeSkills()
+    .then(async (skills) => {
+      // Assign scraped skills to profile object
+      profile.skills = skills;
+
+      // Save profile data to Chrome local storage
+      await chrome.storage.local.set({ profileData: profile });
+      // Send message to background or other extension parts with profile data
       chrome.runtime.sendMessage({
         type: "SAVE_PROFILE",
         data: profile,
       });
     })
     .finally(() => {
-      if (window.location.href != profile.url) {
+      // Redirect back to base profile URL if URL changed during scraping
+      if (window.location.href !== profile.url) {
         window.location.replace(profile.url);
       }
     });
+
+  // Export for tests
+  module.exports = { profile, scrapeSkills };
 })();
