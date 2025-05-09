@@ -7,32 +7,34 @@
   <title>LinkedIn Profile Data</title>
 </head>
 <body>
-  <!-- Profile card -->
   <div class="card" id="app-section">
     <div class="theme-toggle">
       <span>🌙</span>
       <input type="checkbox" id="theme-switch" />
     </div>
-    <h1 style="text-align:center;">Profile Data</h1>
+
+    <header>
+      <h1 class="center">Profile Data</h1>
+    </header>
 
     <div class="field">
       <label for="url">URL</label>
-      <input type="text" id="url" readonly value="https://www.linkedin.com/in/garyvaynerchuk/" />
+      <input type="text" id="url" readonly />
     </div>
 
     <div class="field">
       <label for="fullName">Full Name</label>
-      <input type="text" id="fullName" readonly value="" />
+      <input type="text" id="fullName" readonly />
     </div>
 
     <div class="field">
       <label for="headline">Headline</label>
-      <input type="text" id="headline" readonly value="" />
+      <input type="text" id="headline" readonly />
     </div>
 
     <div class="field">
       <label for="location">Location</label>
-      <input type="text" id="location" readonly value="" />
+      <input type="text" id="location" readonly />
     </div>
 
     <div class="field">
@@ -42,22 +44,12 @@
 
     <div class="field">
       <label for="experience">Experience</label>
-      <div class="list-container" id="experience">
-        <div class="experience-item">
-          <input type="text" class="experience-main" readonly value="" />
-          <div class="experience-secondary">
-            <input type="text" class="experience-period" readonly value="" placeholder="Period" />
-            <input type="text" class="experience-extra" readonly value="" placeholder="Details" />
-          </div>
-        </div>
-      </div>
+      <div class="list-container" id="experience"></div>
     </div>
 
     <div class="field">
       <label for="education">Education</label>
-      <div class="list-container" id="education">
-        <input type="text" readonly value="" placeholder="Not Found"/>
-      </div>
+      <div class="list-container" id="education"></div>
     </div>
 
     <div class="field">
@@ -65,8 +57,8 @@
       <textarea id="skills" rows="3" readonly></textarea>
     </div>
 
-    <button type="button" id="run-btn">Save Candidate</button>
-    <button type="button" id="logout-btn">Cancel</button>
+    <button type="button" id="save-candidate-btn">Save Candidate</button>
+    <button type="button" id="discard-profile-btn">Discard</button>
 
     <script type="module" src="profile.js"></script>
   </div>

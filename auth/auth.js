@@ -1,154 +1,142 @@
-// popup.js
+// auth.js
 import * as val    from '../shared/validation.js';
 import * as api    from '../shared/api.js';
 import * as themes from '../shared/themes.js';
 import * as ui     from '../shared/ui.js';
 
-// Cached element refs
-const loginBtn    = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
-const logoutBtn   = document.getElementById('logout-btn');
-const runBtn      = document.getElementById('run-btn');
-const emailLogin  = document.getElementById('email-login');
-const passLogin   = document.getElementById('pass-login');
-const loginErr    = document.getElementById('login-error');
-const emailReg    = document.getElementById('email-reg');
-const passReg     = document.getElementById('pass-reg');
-const passConf    = document.getElementById('pass-confirm');
-const registerErr = document.getElementById('register-error');
+const loginButton    = document.getElementById('login-btn');
+const registerButton = document.getElementById('register-btn');
+const logoutButton   = document.getElementById('logout-btn');
+const parseButton    = document.getElementById('run-btn');
+const emailInput     = document.getElementById('email-login');
+const passwordInput  = document.getElementById('pass-login');
+const loginError     = document.getElementById('login-error');
+const regEmailInput  = document.getElementById('email-reg');
+const regPassword    = document.getElementById('pass-reg');
+const regConfirm     = document.getElementById('pass-confirm');
+const registerError  = document.getElementById('register-error');
 
-/**
- * Set up all event handlers and initial UI state
- */
 async function initPopup() {
-  // If we already have profileData stored, go straight to the profile view
   try {
-    const { profileData } = await chrome.storage.local.get('profileData')
+    const { profileData } = await chrome.storage.local.get('profileData');
     if (profileData) {
       window.location.href = chrome.runtime.getURL('../profile/profile.html');
+      return;
     }
   } catch (e) {
-    console.error('Error reading profileData from storage', e);
+    console.error('Failed to load stored profileData', e);
   }
 
-  // Theme and tabs
   await themes.initTheme();
   themes.setupThemeToggle();
   ui.setupTabs();
   await ui.syncAuthUI();
-  await ui.updateParseVisibility(runBtn);
+  await ui.updateParseVisibility(parseButton);
 
-  // Enter key binding
-  document.getElementById('form-login')
-    .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); loginBtn.click(); }});
-  document.getElementById('form-register')
-    .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); registerBtn.click(); }});
+  document.getElementById('form-login').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      loginButton.click();
+    }
+  });
 
-  // LOGIN handler
-  loginBtn.addEventListener('click', async () => {
-    loginErr.textContent = '';
-    const email = emailLogin.value.trim();
-    const pwd   = passLogin.value;
+  document.getElementById('form-register').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      registerButton.click();
+    }
+  });
+
+  loginButton.addEventListener('click', async () => {
+    loginError.textContent = '';
+    const email = emailInput.value.trim();
+    const pwd   = passwordInput.value;
 
     if (!val.isValidEmail(email)) {
-      loginErr.textContent = 'Invalid email format';
-      return;
-    }
-    const domain = email.split('@')[1]?.toLowerCase() || '';
-    if (!domain.includes('.') || val.isDisposableTLD(domain)) {
-      loginErr.textContent = 'Invalid email domain';
+      loginError.textContent = 'Invalid email format';
       return;
     }
 
-    loginBtn.disabled = true;
+    const domain = email.split('@')[1]?.toLowerCase() || '';
+    if (!domain.includes('.') || val.isDisposableTLD(domain)) {
+      loginError.textContent = 'Invalid email domain';
+      return;
+    }
+
+    loginButton.disabled = true;
     try {
       const { token, userId } = await api.login(email, pwd);
       await chrome.storage.local.set({ token, userId });
       await ui.syncAuthUI();
-      updateParseVisibility();
+      await ui.updateParseButtonVisibility(parseButton);
     } catch (err) {
-      loginErr.textContent = err.message;
+      loginError.textContent = err.message;
     } finally {
-      loginBtn.disabled = false;
+      loginButton.disabled = false;
     }
   });
 
-  // REGISTER handler
-  registerBtn.addEventListener('click', async () => {
-    registerErr.textContent = '';
-    const email = emailReg.value.trim();
-    const pwd   = passReg.value;
-    const cf    = passConf.value;
+  registerButton.addEventListener('click', async () => {
+    registerError.textContent = '';
+    const email = regEmailInput.value.trim();
+    const pwd   = regPassword.value;
+    const cf    = regConfirm.value;
 
     if (!val.isValidEmail(email)) {
-      registerErr.textContent = 'Invalid email format';
-      return;
-    }
-    const domain = email.split('@')[1]?.toLowerCase() || '';
-    if (!domain.includes('.') || val.isDisposableTLD(domain)) {
-      registerErr.textContent = 'Invalid email domain';
+      registerError.textContent = 'Invalid email format';
       return;
     }
 
-    registerBtn.disabled = true;
+    const domain = email.split('@')[1]?.toLowerCase() || '';
+    if (!domain.includes('.') || val.isDisposableTLD(domain)) {
+      registerError.textContent = 'Invalid email domain';
+      return;
+    }
+
+    registerButton.disabled = true;
     try {
       if (!await val.hasMXRecord(domain)) throw new Error('Email domain not accepting mail');
       if (!val.isStrongPassword(pwd)) throw new Error('Weak password');
       if (pwd !== cf) throw new Error('Passwords do not match');
 
       await api.register(email, pwd);
-      const msg = ui.showSuccessMessage(registerBtn, 'Registered! Redirecting…');
+      const msg = ui.showSuccessMessage(registerButton, 'Registered! Redirecting…');
       setTimeout(async () => {
         msg.remove();
         ui.clearRegisterForm();
         document.getElementById('tab-login').click();
-        emailLogin.value = email;
+        emailInput.value = email;
         await ui.syncAuthUI();
-        updateParseVisibility();
+        await ui.updateParseButtonVisibility(parseButton);
       }, 1500);
     } catch (err) {
-      registerErr.textContent = err.message;
+      registerError.textContent = err.message;
     } finally {
-      registerBtn.disabled = false;
+      registerButton.disabled = false;
     }
   });
 
-  // LOGOUT handler
-  logoutBtn.addEventListener('click', async () => {
-    await chrome.storage.local.remove(['token','userId']);
+  logoutButton.addEventListener('click', async () => {
+    await chrome.storage.local.remove(['token', 'userId']);
     ui.clearLoginForm();
     ui.clearRegisterForm();
     await ui.syncAuthUI();
-    updateParseVisibility();
+    await ui.updateParseButtonVisibility(parseButton);
   });
 
-  // PARSE handler
-  runBtn.addEventListener('click', () => {
+  parseButton.addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       chrome.scripting.executeScript({ target: { tabId: tabs[0].id }, files: ['content.js'] });
       window.location.href = chrome.runtime.getURL('../profile/profile.html');
     });
   });
 
-// HANDLE PARSED DATA via backend parsing
-chrome.runtime.onMessage.addListener(async msg => {
-  if (msg.type === 'PARSED_DATA') {
-    const profile = msg.data;
-    console.log('Received parsed profile:', profile);
-
-    // Save to backend
-    // const { token, userId } = await chrome.storage.local.get(['token','userId']);
-    // try {
-      // await api.saveProfile(token, userId, profile);
-      // console.log('✅ Profile saved to DB');
-      // Optionally show a toast or UI feedback
-      // ui.showToast('Profile saved successfully');
-    // } catch (err) {
-      // console.error('Error saving profile:', err);
-      // ui.showToast('Error saving profile', 'danger');
-    // }
-  }
-});
+  chrome.runtime.onMessage.addListener(async msg => {
+    if (msg.type === 'PARSED_DATA') {
+      const profile = msg.data;
+      console.log('Parsed profile received:', profile);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initPopup);

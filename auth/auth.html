@@ -2,77 +2,55 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="auth.css">
+  <title>Candidate Auth</title>
 </head>
 <body>
-  <!-- Toast Notification (outside flex flow) -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Authentication Section -->
   <div class="card" id="auth-section">
     <div class="theme-toggle">
       <span>🌙</span>
       <input type="checkbox" id="theme-switch" />
     </div>
+
     <div class="tabs">
       <button id="tab-login" class="active">Sign In</button>
       <button id="tab-register">Register</button>
     </div>
+
     <form id="form-login" class="form">
       <div class="field">
         <label for="email-login">Email</label>
-        <input type="email"
-               id="email-login"
-               required
-               pattern="^[A-Za-z0-9_+&amp;*\-]+(?:\.[A-Za-z0-9_+&amp;*\-]+)*@(?:[A-Za-z0-9\-]+\.)+[A-Za-z]{2,7}$"
-               title="Enter a valid email address" />
+        <input type="email" id="email-login" required title="Enter a valid email address" />
       </div>
       <div class="field">
         <label for="pass-login">Password</label>
-        <input type="password"
-               id="pass-login"
-               required
-               minlength="8"
-               maxlength="64"
-               title="Password must be 8–64 characters" />
+        <input type="password" id="pass-login" required minlength="8" maxlength="64" title="Password must be 8–64 characters" />
       </div>
       <button type="button" id="login-btn">Sign In</button>
       <div id="login-error" role="alert"></div>
     </form>
+
     <form id="form-register" class="form hidden">
       <div class="field">
         <label for="email-reg">Email</label>
-        <input type="email"
-               id="email-reg"
-               required
-               pattern="^[A-Za-z0-9_+&amp;*\-]+(?:\.[A-Za-z0-9_+&amp;*\-]+)*@(?:[A-Za-z0-9\-]+\.)+[A-Za-z]{2,7}$"
-               title="Enter a valid email address" />
+        <input type="email" id="email-reg" required title="Enter a valid email address" />
       </div>
       <div class="field">
         <label for="pass-reg">Password</label>
-        <input type="password"
-               id="pass-reg"
-               required
-               minlength="8"
-               maxlength="64"
-               title="Password must be 8–64 characters" />
+        <input type="password" id="pass-reg" required minlength="8" maxlength="64" title="Password must be 8–64 characters" />
       </div>
       <div class="field">
         <label for="pass-confirm">Confirm Password</label>
-        <input type="password"
-               id="pass-confirm"
-               required
-               minlength="8"
-               maxlength="64"
-               title="Password must be 8–64 characters" />
+        <input type="password" id="pass-confirm" required minlength="8" maxlength="64" title="Password must be 8–64 characters" />
       </div>
       <button type="button" id="register-btn">Register</button>
       <div id="register-error" role="alert"></div>
     </form>
   </div>
 
-  <!-- App Section (post-login) -->
   <div class="card hidden" id="app-section">
     <div class="theme-toggle">
       <span>🌙</span>
