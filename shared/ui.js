@@ -67,3 +67,21 @@ export function showSuccessMessage(button, text) {
   button.insertAdjacentElement('afterend', msg);
   return msg;
 }
+
+/**
+ * Toggle Parse button visibility based on active tab URL
+ */
+export async function updateParseVisibility(runBtn) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const url = tab?.url || '';
+  let isProfile = false;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    isProfile = (host === 'www.linkedin.com' || host === 'linkedin.com')
+                && u.pathname.startsWith('/in/');
+  } catch {
+    // invalid URL
+  }
+  runBtn.style.display = isProfile ? 'inline-block' : 'none';
+}

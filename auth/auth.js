@@ -1,8 +1,8 @@
 // popup.js
-import * as val    from './validation.js';
-import * as api    from './api.js';
-import * as themes from './themes.js';
-import * as ui     from './ui.js';
+import * as val    from '../shared/validation.js';
+import * as api    from '../shared/api.js';
+import * as themes from '../shared/themes.js';
+import * as ui     from '../shared/ui.js';
 
 // Cached element refs
 const loginBtn    = document.getElementById('login-btn');
@@ -18,33 +18,25 @@ const passConf    = document.getElementById('pass-confirm');
 const registerErr = document.getElementById('register-error');
 
 /**
- * Toggle Parse button visibility based on active tab URL
- */
-async function updateParseVisibility() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const url = tab?.url || '';
-  let isProfile = false;
-  try {
-    const u = new URL(url);
-    const host = u.hostname.toLowerCase();
-    isProfile = (host === 'www.linkedin.com' || host === 'linkedin.com')
-                && u.pathname.startsWith('/in/');
-  } catch {
-    // invalid URL
-  }
-  runBtn.style.display = isProfile ? 'inline-block' : 'none';
-}
-
-/**
  * Set up all event handlers and initial UI state
  */
 async function initPopup() {
+  // If we already have profileData stored, go straight to the profile view
+  try {
+    const { profileData } = await chrome.storage.local.get('profileData')
+    if (profileData) {
+      window.location.href = chrome.runtime.getURL('../profile/profile.html');
+    }
+  } catch (e) {
+    console.error('Error reading profileData from storage', e);
+  }
+
   // Theme and tabs
   await themes.initTheme();
   themes.setupThemeToggle();
   ui.setupTabs();
   await ui.syncAuthUI();
-  updateParseVisibility();
+  await ui.updateParseVisibility(runBtn);
 
   // Enter key binding
   document.getElementById('form-login')
@@ -134,6 +126,7 @@ async function initPopup() {
   runBtn.addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       chrome.scripting.executeScript({ target: { tabId: tabs[0].id }, files: ['content.js'] });
+      window.location.href = chrome.runtime.getURL('../profile/profile.html');
     });
   });
 
@@ -144,16 +137,16 @@ chrome.runtime.onMessage.addListener(async msg => {
     console.log('Received parsed profile:', profile);
 
     // Save to backend
-    const { token, userId } = await chrome.storage.local.get(['token','userId']);
-    try {
-      await api.saveProfile(token, userId, profile);
-      console.log('✅ Profile saved to DB');
+    // const { token, userId } = await chrome.storage.local.get(['token','userId']);
+    // try {
+      // await api.saveProfile(token, userId, profile);
+      // console.log('✅ Profile saved to DB');
       // Optionally show a toast or UI feedback
-      ui.showToast('Profile saved successfully');
-    } catch (err) {
-      console.error('Error saving profile:', err);
-      ui.showToast('Error saving profile', 'danger');
-    }
+      // ui.showToast('Profile saved successfully');
+    // } catch (err) {
+      // console.error('Error saving profile:', err);
+      // ui.showToast('Error saving profile', 'danger');
+    // }
   }
 });
 }
