@@ -1,3 +1,5 @@
+/* popup.css */
+
 :root {
   --bg: #f2f2f2;
   --card-bg: rgba(255, 255, 255, 0.8);
@@ -25,9 +27,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Roboto, sans-serif;
+  font-family: "Segoe UI", Roboto, sans-serif;
 }
-
 
 body {
   width: 360px;
@@ -48,13 +49,7 @@ body {
 }
 
 [data-theme="dark"] .card {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 16px var(--accent);
-}
-
-.center {
-  text-align: center;
-  letter-spacing: 1px;
-  font-weight: 400;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent);
 }
 
 .theme-toggle {
@@ -73,12 +68,12 @@ body {
 .theme-toggle input {
   width: 40px;
   height: 20px;
-  appearance: none;
+  -webkit-appearance: none;
   background: #bbb;
   border-radius: 10px;
   position: relative;
-  cursor: pointer;
   transition: background 0.3s;
+  cursor: pointer;
 }
 
 .theme-toggle input:checked {
@@ -101,6 +96,80 @@ body {
   transform: translateX(20px);
 }
 
+.tabs {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s, border-color 0.3s;
+  border-bottom: 3px solid transparent;
+}
+
+.tabs button:hover {
+  opacity: 1;
+}
+
+.tabs button.active {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  opacity: 0.95;
+  z-index: 10;
+  transition: opacity 0.3s ease;
+}
+
+.toast.hidden {
+  display: none;
+  opacity: 0;
+}
+
+.toast.show {
+  display: block;
+  opacity: 0.95;
+}
+
+.success-message {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--accent);
+  text-align: center;
+  margin: 4px 0;
+}
+
+.hidden {
+  display: none;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -113,8 +182,7 @@ body {
   opacity: 0.85;
 }
 
-.field input,
-.field textarea {
+.field input {
   width: 100%;
   padding: 10px 12px;
   border: none;
@@ -124,45 +192,7 @@ body {
   font-size: 1rem;
 }
 
-textarea {
-  resize: vertical;
-  overflow-x: auto;
-}
-
-.list-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.experience-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
-}
-
-.experience-secondary {
-  display: flex;
-  gap: 6px;
-  width: 100%;
-}
-
-.experience-period,
-.experience-extra {
-  flex: 1;
-  font-size: 0.75rem !important;
-  font-weight: 400;
-  opacity: 0.85;
-  padding: 3px 6px !important;
-  align-self: flex-start;
-  background: var(--input-bg);
-  color: var(--text);
-  border-radius: 8px;
-  border: none;
-}
-
-button {
+button[type="button"] {
   padding: 12px 24px;
   width: fit-content;
   align-self: center;
@@ -171,25 +201,36 @@ button {
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
+  transition: transform 0.1s, background 0.2s;
   transition: all 0.2s ease-in-out;
 }
 
-button:active {
+button[type="button"]:active {
   transform: scale(0.98);
 }
 
-button:hover {
+#login-btn,
+#register-btn,
+#run-btn {
+  background: var(--accent-dark);
+  color: #fff;
+}
+
+#logout-btn {
+  background: var(--danger-dark);
+  color: #fff;
+}
+
+#login-error,
+#register-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  text-align: center;
+  min-height: 1.2em;
+}
+
+button[type="button"]:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
   filter: brightness(1.05);
-}
-
-#save-candidate-btn {
-  background: var(--success);
-  color: #fff;
-}
-
-#discard-profile-btn {
-  background: var(--danger-dark);
-  color: #fff;
 }

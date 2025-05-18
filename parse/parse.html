@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="parse.css" />
+    <title>Candidate Parser</title>
+  </head>
+  <body>
+    <div id="toast" class="toast hidden"></div>
+
+    <div class="card" id="auth-section">
+      <div class="theme-toggle">
+        <span>🌙</span>
+        <input type="checkbox" id="theme-switch" />
+      </div>
+      
+      <h2 style="text-align: center; letter-spacing: 1px; font-weight: 400">
+        Candidate Parser
+      </h2>
+
+      <button type="button" id="run-btn">Parse Candidate</button>
+      <button type="button" id="logout-btn">Sign Out</button>
+    </div>
+
+    <script type="module" src="parse.js"></script>
+  </body>
+</html>

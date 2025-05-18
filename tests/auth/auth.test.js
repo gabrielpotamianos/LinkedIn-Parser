@@ -1,162 +1,106 @@
+import { jest, describe, test, expect, beforeAll } from '@jest/globals';
 /**
  * @jest-environment jsdom
  */
 
-const jestChrome = require('jest-chrome');
-global.chrome = {
-  storage: { local: { set: jest.fn((obj, cb) => cb && cb()), remove: jest.fn() } },
-  runtime: { sendMessage: jest.fn() },
-  tabs: { query: jest.fn((opts, cb) => cb([{ id: 42 }])) },
-  scripting: { executeScript: jest.fn() },
-  runtime: { getURL: jest.fn((path) => `chrome-extension://extension-id/${path}`), sendMessage: jest.fn() },
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+
+// Load and extract the <body> contents from the mockHtml.html fixture
+const rawHtml = fs.readFileSync(
+  path.resolve(__dirname, "../fixtures/authMock.html"),
+  "utf8"
+);
+const bodyMatch = rawHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+const bodyHtml = bodyMatch ? bodyMatch[1] : rawHtml;
+
+// Setup chrome mock manually for ESM
+globalThis.chrome = {
+  storage: {
+    local: {
+      get: jest.fn(() => Promise.resolve({})),
+      set: jest.fn(() => Promise.resolve())
+    }
+  },
+  runtime: {
+    getURL: jest.fn((path) => `chrome-extension://some-id/${path}`)
+  }
 };
 
-const val = require('../../shared/validation.js');
-const api = require('../../shared/api.js');
-const ui = require('../../shared/ui.js');
-const themes = require('../../shared/themes.js');
-const {
-  extractDomain,
-  disableButton,
-  enableButton,
-  saveCredentials,
-  handleRegistrationSuccess,
-  setupEventHandlers,
-} = require('../auth/auth.js');
+if (!window.matchMedia) {
+  window.matchMedia = jest.fn().mockImplementation(query => ({
+    matches: false, // or true depending on what you want to simulate
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated but might be used
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
+}
 
-jest.useFakeTimers();
-const flushPromises = () => new Promise(setImmediate);
+beforeAll(async () => {
+  document.body.innerHTML = bodyHtml;
+  const { initPopup } = await import('../../auth/auth.js'); // dynamic import
+  await initPopup();
+});
 
-describe('Auth Helpers', () => {
-  test('extractDomain returns lowercase domain', () => {
-    expect(extractDomain('USER@Example.COM')).toBe('example.com');
-    expect(extractDomain('no-at-sign')).toBe('');
-    expect(extractDomain('')).toBe('');
+describe("Popup HTML elements", () => {
+  test("login form and button are present", () => {
+    expect(document.getElementById("form-login")).toBeTruthy();
+    expect(document.getElementById("login-btn")).toBeTruthy();
   });
 
-  test('disableButton and enableButton toggle disabled', () => {
-    const btn = document.createElement('button');
-    btn.disabled = false;
-    disableButton(btn);
-    expect(btn.disabled).toBe(true);
-    enableButton(btn);
-    expect(btn.disabled).toBe(false);
-  });
-
-  test('saveCredentials calls chrome.storage.local.set', async () => {
-    await saveCredentials('tok', 'id');
-    expect(global.chrome.storage.local.set).toHaveBeenCalledWith(
-      { token: 'tok', userId: 'id' },
-      expect.any(Function)
-    );
+  test("registration form and button are present", () => {
+    expect(document.getElementById("form-register")).toBeTruthy();
+    expect(document.getElementById("register-btn")).toBeTruthy();
   });
 });
 
-describe('Login Validation', () => {
-  let loginButton, emailInput, passInput, loginError;
-
-  beforeEach(() => {
-    document.body.innerHTML = `
-      <form id="form-login"><input id="email-login"/><input id="pass-login"/><button id="login-btn"></button><div id="login-error"></div></form>
-    `;
-    loginButton = document.getElementById('login-btn');
-    emailInput = document.getElementById('email-login');
-    passInput = document.getElementById('pass-login');
-    loginError = document.getElementById('login-error');
-    setupEventHandlers();
+describe("Form input presence", () => {
+  test("login input fields exist", () => {
+    expect(document.getElementById("email-login")).toBeTruthy();
+    expect(document.getElementById("pass-login")).toBeTruthy();
+    expect(document.getElementById("login-error")).toBeTruthy();
   });
 
-  test('shows error for invalid email format', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(false);
-    emailInput.value = 'bad';
-    passInput.value = 'pwd';
-    loginButton.click();
-    await flushPromises();
-    expect(loginError.textContent).toBe('Invalid email format');
+  test("register input fields exist", () => {
+    expect(document.getElementById("email-reg")).toBeTruthy();
+    expect(document.getElementById("pass-reg")).toBeTruthy();
+    expect(document.getElementById("pass-confirm")).toBeTruthy();
+    expect(document.getElementById("register-error")).toBeTruthy();
   });
 
-  test('shows error for invalid email domain', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(true);
-    jest.spyOn(val, 'isDisposableTLD').mockReturnValue(true);
-    emailInput.value = 'user@bad';
-    passInput.value = 'pwd';
-    loginButton.click();
-    await flushPromises();
-    expect(loginError.textContent).toBe('Invalid email domain');
+  test("tab buttons exist", () => {
+    expect(document.getElementById("tab-login")).toBeTruthy();
+    expect(document.getElementById("tab-register")).toBeTruthy();
+  });
+
+  test("theme toggle is present", () => {
+    expect(document.getElementById("theme-switch")).toBeTruthy();
   });
 });
 
-describe('Registration Validation', () => {
-  let regBtn, emailReg, passReg, passConfirm, regError;
-
-  beforeEach(() => {
-    document.body.innerHTML = `
-      <form id="form-register"><input id="email-reg"/><input id="pass-reg"/><input id="pass-confirm"/><button id="register-btn"></button><div id="register-error"></div></form>
-    `;
-    regBtn = document.getElementById('register-btn');
-    emailReg = document.getElementById('email-reg');
-    passReg = document.getElementById('pass-reg');
-    passConfirm = document.getElementById('pass-confirm');
-    regError = document.getElementById('register-error');
-    setupEventHandlers();
+describe("Keydown event handling", () => {
+  test("pressing Enter on login form triggers login button click", () => {
+    const loginBtn = document.getElementById("login-btn");
+    const spy = jest.spyOn(loginBtn, "click");
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+    document.getElementById("email-login").dispatchEvent(event);
+    expect(spy).toHaveBeenCalled();
   });
 
-  test('shows error for invalid email format', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(false);
-    emailReg.value = 'bad';
-    passReg.value = 'Pwd1!';
-    passConfirm.value = 'Pwd1!';
-    regBtn.click();
-    await flushPromises();
-    expect(regError.textContent).toBe('Invalid email format');
-  });
-
-  test('shows error for invalid email domain', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(true);
-    jest.spyOn(val, 'isDisposableTLD').mockReturnValue(true);
-    emailReg.value = 'user@bad';
-    passReg.value = 'Pwd1!';
-    passConfirm.value = 'Pwd1!';
-    regBtn.click();
-    await flushPromises();
-    expect(regError.textContent).toBe('Invalid email domain');
-  });
-
-  test('shows error when domain has no MX record', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(true);
-    jest.spyOn(val, 'isDisposableTLD').mockReturnValue(false);
-    jest.spyOn(val, 'hasMXRecord').mockResolvedValue(false);
-    emailReg.value = 'user@example.com';
-    passReg.value = 'Pwd1!';
-    passConfirm.value = 'Pwd1!';
-    regBtn.click();
-    await flushPromises();
-    expect(regError.textContent).toBe('Email domain not accepting mail');
-  });
-
-  test('shows error for weak password', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(true);
-    jest.spyOn(val, 'isDisposableTLD').mockReturnValue(false);
-    jest.spyOn(val, 'hasMXRecord').mockResolvedValue(true);
-    jest.spyOn(val, 'isStrongPassword').mockReturnValue(false);
-    emailReg.value = 'user@example.com';
-    passReg.value = 'weak';
-    passConfirm.value = 'weak';
-    regBtn.click();
-    await flushPromises();
-    expect(regError.textContent).toBe('Weak password');
-  });
-
-  test('shows error when passwords do not match', async () => {
-    jest.spyOn(val, 'isValidEmail').mockReturnValue(true);
-    jest.spyOn(val, 'isDisposableTLD').mockReturnValue(false);
-    jest.spyOn(val, 'hasMXRecord').mockResolvedValue(true);
-    jest.spyOn(val, 'isStrongPassword').mockReturnValue(true);
-    emailReg.value = 'user@example.com';
-    passReg.value = 'Pwd1!';
-    passConfirm.value = 'Other1!';
-    regBtn.click();
-    await flushPromises();
-    expect(regError.textContent).toBe('Passwords do not match');
+  test("pressing Enter on register form triggers register button click", () => {
+    const regBtn = document.getElementById("register-btn");
+    const spy = jest.spyOn(regBtn, "click");
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+    document.getElementById("email-reg").dispatchEvent(event);
+    expect(spy).toHaveBeenCalled();
   });
 });

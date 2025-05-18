@@ -19,7 +19,7 @@ import * as themes from "../shared/themes.js";
  * @param {number} [delay=50] - Delay in milliseconds between each character.
  * @returns {Promise<void>} Resolves when animation completes.
  */
-function typeWriter(el, text, delay = 50) {
+export function typeWriter(el, text, delay = 50) {
   return new Promise((resolve) => {
     if (window.skipAnimations) {
       el.value = text;
@@ -44,7 +44,7 @@ function typeWriter(el, text, delay = 50) {
  * @param {string} [value=""] - Initial value of the input.
  * @returns {HTMLInputElement} The created read-only input element.
  */
-function createReadOnlyInput(className = "", value = "") {
+export function createReadOnlyInput(className = "", value = "") {
   const input = document.createElement("input");
   input.type = "text";
   input.readOnly = true;
@@ -63,7 +63,7 @@ function createReadOnlyInput(className = "", value = "") {
  * @param {Array<Promise>} animations - Array to collect animation promises.
  * @returns {HTMLInputElement} The created input element.
  */
-function animateInput(container, className, text, animations) {
+export function animateInput(container, className, text, animations) {
   const input = createReadOnlyInput(className);
   container.appendChild(input);
   animations.push(typeWriter(input, text));
@@ -85,7 +85,7 @@ function animateInput(container, className, text, animations) {
  * @param {Object} profileData - Profile data object containing various fields.
  * @returns {Promise<void>} Resolves when all animations complete.
  */
-async function renderProfile(profileData) {
+export async function renderProfile(profileData) {
   // Helper to animate element by ID if it exists
   const animate = (id, val) => {
     const el = document.getElementById(id);
@@ -194,9 +194,12 @@ async function renderProfile(profileData) {
 /**
  * Listens for runtime messages and triggers rendering for SAVE_PROFILE type.
  */
-chrome.runtime.onMessage.addListener(async (msg) => {
-  if (msg.type === "SAVE_PROFILE") await renderProfile(msg.data);
-});
+
+if (typeof chrome !== "undefined" && chrome.runtime?.onMessage?.addListener) {
+  chrome.runtime.onMessage.addListener(async (msg) => {
+    if (msg.type === "SAVE_PROFILE") await renderProfile(msg.data);
+  });
+}
 
 /**
  * On page load, initialize theme and render stored profile

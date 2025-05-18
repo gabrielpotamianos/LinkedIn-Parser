@@ -6,8 +6,9 @@
   "directories": {
     "test": "tests"
   },
+  "type": "module",
   "scripts": {
-    "test": "jest --watch"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "repository": {
     "type": "git",

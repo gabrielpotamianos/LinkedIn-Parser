@@ -5,6 +5,18 @@
  * against our mockProfile.html fixture.
  */
 
+import { jest, describe, test, expect, beforeEach } from "@jest/globals";
+
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let profile;
+let scrapeSkills;
+
 // Polyfill innerText in jsdom by delegating to textContent
 Object.defineProperty(HTMLElement.prototype, "innerText", {
   get() {
@@ -18,19 +30,14 @@ Object.defineProperty(HTMLElement.prototype, "innerText", {
 });
 
 // Mock the Chrome APIs so storage/runtime calls don’t blow up
-require("jest-chrome");
+import "jest-chrome";
 global.chrome = {
   storage: { local: { set: jest.fn((obj, cb) => cb && cb()) } },
   runtime: { sendMessage: jest.fn() },
 };
 
-let profile;
-let scrapeSkills;
-
 describe("Full LinkedIn Profile Scraping", () => {
   beforeEach(async () => {
-    const fs = require("fs");
-    const path = require("path");
     const html = fs.readFileSync(
       path.resolve(__dirname, "./fixtures/mockProfile.html"),
       "utf8"
@@ -38,10 +45,10 @@ describe("Full LinkedIn Profile Scraping", () => {
 
     // Only inject the content inside <body>…</body> so selectors can find elements
     document.body.innerHTML = html.toString();
-    // Require the content script after the DOM is in place
-    const contentModule = require("../content.js");
-    profile = contentModule.profile;
-    scrapeSkills = contentModule.scrapeSkills;
+    // Import the core module and allow its IIFE to run
+    await import("../content.js");
+    profile= window.profile;
+    scrapeSkills = window.scrapeSkills;
   });
 
   test("parses basic profile fields", async () => {

@@ -32,22 +32,6 @@ export function isValidEmail(email) {
   return emailPattern.test(email);
 }
 
-// Disposable Domain Checks
-const disposableTLDs = new Set([
-  'ga', 'cf', 'ml', 'tk', 'xyz', 'info', 'top', 'buzz', 'work', 'live', 'online'
-]);
-
-export function isDisposableTLD(domain) {
-  /**
-   * Checks if a domain's top-level domain (TLD) is commonly used for disposable email addresses.
-   * @param {string} domain - The domain to check.
-   * @returns {boolean} True if the TLD is disposable, false otherwise.
-   */
-  const parts = domain.split('.');
-  const tld = parts[parts.length - 1].toLowerCase();
-  return disposableTLDs.has(tld);
-}
-
 // Password Strength Validation
 export function isStrongPassword(pass) {
   /**

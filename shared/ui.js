@@ -56,16 +56,14 @@ export function setupTabs() {
     tabRegister.classList.remove('active');
     formLogin.classList.remove('hidden');
     formRegister.classList.add('hidden');
-    clearLoginForm();
-    clearRegisterForm();
+    clearForms();
   });
   tabRegister.addEventListener('click', () => {
     tabRegister.classList.add('active');
     tabLogin.classList.remove('active');
     formRegister.classList.remove('hidden');
     formLogin.classList.add('hidden');
-    clearLoginForm();
-    clearRegisterForm();
+    clearForms();
   });
 }
 
@@ -77,17 +75,9 @@ export function setupTabs() {
  * Clears form inputs and errors when switching.
  * @returns {Promise<void>}
  */
-export async function syncAuthUI() {
-  const { token } = await chrome.storage.local.get('token');
-  if (token) {
-    clearLoginForm();
-    clearRegisterForm();
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-  } else {
-    authSection.classList.remove('hidden');
-    appSection.classList.add('hidden');
-  }
+export async function clearForms() {
+  clearLoginForm();
+  clearRegisterForm();
 }
 
  // Feedback Messages

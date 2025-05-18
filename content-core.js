@@ -1,21 +1,5 @@
-/**
- * Content script for LinkedIn profile data parsing.
- *
- * This module scrapes profile information including About, Experience,
- * Education, and Skills sections from the DOM. It handles expanding
- * hidden content, paginating skill lists, and deduplicating skill entries.
- *
- * Dependencies:
- * - Chrome extension APIs (chrome.storage, chrome.runtime)
- * - DOM APIs for querying and mutation observation
- *
- * Execution Context:
- * Runs as an immediately invoked async function in the context of a LinkedIn
- * profile page.
- */
-
-let profile = null;
-let scrapeSkills = null;
+export let profile = null;
+export let scrapeSkills = null;
 
 
 (async () => {
@@ -293,8 +277,4 @@ let scrapeSkills = null;
         window.location.replace(profile.url);
       }
     });
-
-      // Ensure test globals are set
-  window.profile = profile;
-  window.scrapeSkills = scrapeSkills;
 })();
