@@ -4,6 +4,7 @@
 
 // DNS Utilities
 // DNS-over-HTTPS MX-record check via Cloudflare
+/* istanbul ignore next */
 export async function hasMXRecord(domain) {
   /**
    * Checks if a domain has MX records using Cloudflare DNS-over-HTTPS.
