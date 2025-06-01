@@ -35,6 +35,7 @@ export async function initTheme() {
  * Saves the selected theme to storage and applies it.
  */
 export function setupThemeToggle() {
+  console.log("inside themes.js")
   switches.forEach(sw => {
     sw.addEventListener('change', async () => {
       const t = sw.checked ? 'dark' : 'light';

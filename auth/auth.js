@@ -16,6 +16,7 @@ const registerError = document.getElementById("register-error");
 
 export async function initPopup() {
   try {
+    console.log("inside auth.js")
     const { token } = await chrome.storage.local.get("token");
     const { profileData } = await chrome.storage.local.get("profileData");
     if (profileData) {
@@ -71,11 +72,11 @@ export async function initPopup() {
       const { token, userId } = await api.login(email, pwd);
       await chrome.storage.local.set({ token, userId });
       await ui.clearForms();
+      window.location.href = chrome.runtime.getURL("../parse/parse.html");
     } catch (err) {
       loginError.textContent = err.message;
     } finally {
       loginButton.disabled = false;
-      window.location.href = chrome.runtime.getURL("../parse/parse.html");
     }
   });
 
@@ -99,7 +100,7 @@ export async function initPopup() {
     registerButton.disabled = true;
     try {
       if (!(await val.hasMXRecord(domain)))
-        throw new Error("Email domain not accepting mail");
+        throw new Error("Invalid email domain");
       if (!val.isStrongPassword(pwd)) throw new Error("Weak password");
       if (pwd !== cf) throw new Error("Passwords do not match");
 

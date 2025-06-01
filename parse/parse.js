@@ -11,7 +11,6 @@ logoutButton.addEventListener("click", async () => {
 });
 
 parseButton.addEventListener("click", async () => {
-  console.log("clicked");
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   chrome.scripting.executeScript({
     target: { tabId: tab.id },

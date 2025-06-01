@@ -185,6 +185,7 @@ export async function renderProfile(profileData) {
     ?.addEventListener("click", async () => {
       window.skipAnimations = true;
       await chrome.storage.local.remove("profileData");
+      console.log("button clicked")
       window.close();
     });
 

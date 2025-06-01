@@ -8,6 +8,7 @@
   },
   "type": "module",
   "scripts": {
+    "serve-ext": "http-server extension -p 8080",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "repository": {
@@ -22,6 +23,8 @@
   },
   "homepage": "https://github.com/gabrielpotamianos/LinkedIn-Parser#readme",
   "devDependencies": {
+    "cypress": "^14.3.3",
+    "http-server": "^14.1.1",
     "jest": "^27.5.1",
     "jest-chrome": "^0.8.0",
     "jest-environment-jsdom": "^27.5.1"
