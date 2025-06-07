@@ -12,6 +12,5 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run build # dacă ai build step
       - run: npx serve -l 1234 & # pornește serverul în background
       - run: npx cypress run
