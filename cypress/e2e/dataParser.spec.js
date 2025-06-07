@@ -1,24 +1,85 @@
+/**
+ * @fileoverview
+ * This Cypress end-to-end test suite validates the functionality of the extension's data parser and combined authentication page.
+ * author @gabri-da-dev 
+ */
+
+const MOCK_IFRAME_TAB_ID = 999;
 const linkedinUrl = "https://www.linkedin.com/in/test-user";
-const storage = {};
-let tabQueryCountRef = { count: 0 };
 
-// Helper to stub window.close and track calls
-function stubWindowClose(win) {
-  cy.stub(win, "close")
-    .callsFake(() => {
-      Object.defineProperty(win, "closed", {
-        get: () => true,
-        configurable: true,
-      });
-    })
-    .as("closeWindow");
-  Object.defineProperty(win, "closed", {
-    get: () => false,
-    configurable: true,
-  });
-}
+/**
+ * Creates a mock iframe with the specified HTML content.
+ * @param {Window} win - The window object to create the iframe in.
+ * @param {string} html - The HTML content to populate the iframe with.
+ * @returns {HTMLIFrameElement} The created iframe element.
+ */
+const createMockIframe = (win, html) => {
+  const iframe = win.document.createElement("iframe");
+  iframe.id = "mockLinkedInIframe";
+  Object.assign(iframe.style, { position: "absolute", top: "-9999px" });
+  win.document.body.appendChild(iframe);
 
-function stubChromeAPI(win, storageObj, linkedinUrl, tabRef) {
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  return iframe;
+};
+
+/**
+ * Fills and submits the login form.
+ * @param {string} email - The email address to enter.
+ * @param {string} password - The password to enter.
+ * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the login button click.
+ */
+const login = (email, password) => {
+  cy.get("#email-login").clear().type(email);
+  cy.get("#pass-login").clear().type(password);
+  return cy.get("#login-btn").click();
+};
+
+/**
+ * Registers a new user with email, password and confirmPassword.
+ * @param {string} email - The email address to register.
+ * @param {string} password - The password to register.
+ * @param {string} confirmPassword - The password confirmation.
+ * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the register button click.
+ */
+const register = (email, password, confirmPassword) => {
+  switchToRegister();
+  cy.get("#email-reg").clear().type(email);
+  cy.get("#pass-reg").clear().type(password);
+  cy.get("#pass-confirm").clear().type(confirmPassword);
+  return cy.get("#register-btn").click();
+};
+
+/**
+ * Sets up the chrome API stubs on the iframe window.
+ * @param {Window} iframeWin - The iframe window object.
+ * @param {Object} chromeStubs - The chrome stubs object.
+ * @param {number} tabId - The tab ID to assign.
+ */
+const setupChromeOnIframe = (iframeWin, chromeStubs, tabId) => {
+  iframeWin.chrome = chromeStubs;
+  iframeWin.chrome.storage = chromeStubs.storage;
+  iframeWin.chrome.tabs = chromeStubs.tabs;
+  iframeWin.chrome.runtime = chromeStubs.runtime;
+  iframeWin.chrome.scripting = chromeStubs.scripting;
+  iframeWin.tabId = tabId;
+};
+
+/**
+ * Stubs the chrome API on the given window object.
+ * @param {Object} config - Configuration object.
+ * @param {Window} config.win - The window object to stub.
+ * @param {Object} config.storageObj - The storage object to use.
+ * @param {string} config.linkedinUrl - The LinkedIn URL to respond with.
+ * @param {{count: number}} config.tabRef - Reference object counting tab queries.
+ * @param {string} [config.mockIframeUrl] - Optional mock iframe URL.
+ * @param {number} [config.mockIframeTabId] - Optional mock iframe tab ID.
+ */
+const stubChromeAPI = ({ win, storageObj, linkedinUrl, tabRef, mockIframeUrl, mockIframeTabId }) => {
   win.chrome = {
     storage: {
       local: {
@@ -52,42 +113,111 @@ function stubChromeAPI(win, storageObj, linkedinUrl, tabRef) {
     tabs: {
       query: () => {
         tabRef.count++;
+        if (mockIframeUrl) {
+          return Promise.resolve([{ id: mockIframeTabId, url: mockIframeUrl }]);
+        }
         if (tabRef.count === 2) {
           return Promise.resolve([{ url: linkedinUrl }]);
         }
-        return Promise.resolve([{ url: win.location.href }]);
+        return Promise.resolve([{ id: 1, url: win.location.href }]);
       },
     },
     scripting: {
-      executeScript: () => Promise.resolve(),
+      executeScript: () => {
+        const iframe = win.document.querySelector("#mockLinkedInIframe");
+        if (!iframe) throw new Error("Mock iframe not found");
+
+        const doc = iframe.contentDocument;
+        if (!doc) throw new Error("Iframe document not ready");
+
+        return new Cypress.Promise((resolve) => {
+          const checkBody = () => {
+            if (doc.body) {
+              cy.readFile("content.js").then((scriptContent) => {
+                const scriptEl = doc.createElement("script");
+                scriptEl.textContent = scriptContent;
+                doc.head.appendChild(scriptEl);
+                resolve();
+              });
+            } else {
+              setTimeout(checkBody, 10);
+            }
+          };
+          checkBody();
+        });
+      },
     },
   };
-}
+};
 
-function loadAndRunInIframe(win, mockHtml, contentScript) {
-  const iframe = win.document.createElement("iframe");
-  iframe.id = "mockLinkedInIframe";
-  Object.assign(iframe.style, { position: "absolute", top: "-9999px" });
-  win.document.body.appendChild(iframe);
+/**
+ * Helper to stub window.close and track calls.
+ * @param {Window} win - The window object to stub close on.
+ */
+const stubWindowClose = (win) => {
+  cy.stub(win, "close")
+    .callsFake(() => {
+      Object.defineProperty(win, "closed", {
+        get: () => true,
+        configurable: true,
+      });
+    })
+    .as("closeWindow");
+  Object.defineProperty(win, "closed", {
+    get: () => false,
+    configurable: true,
+  });
+};
 
-  const doc = iframe.contentDocument;
-  doc.open();
-  doc.write(mockHtml);
-  doc.close();
+/**
+ * Switches to the login form tab.
+ * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the login tab click.
+ */
+const switchToLogin = () => {
+  cy.get("#tab-login").click();
+  cy.get("#form-login").should("not.have.class", "hidden");
+  return cy.get("#form-register").should("have.class", "hidden");
+};
 
-  iframe.contentWindow.chrome = win.chrome;
+/**
+ * Switches to the registration form tab.
+ * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the register tab click.
+ */
+const switchToRegister = () => {
+  cy.contains("button, a", "Register").click();
+  cy.get("#form-register").should("not.have.class", "hidden");
+  return cy.get("#form-login").should("have.class", "hidden");
+};
 
-  const scriptEl = doc.createElement("script");
-  scriptEl.type = "text/javascript";
-  scriptEl.textContent = contentScript;
-  doc.head.appendChild(scriptEl);
-
-  return iframe.contentWindow;
-}
+/**
+ * Waits for profile data to be stored in chrome storage.
+ * @param {Window} iframeWin - The iframe window object.
+ * @param {string} key - The storage key to check.
+ * @returns {Cypress.Chainable<Object>} Promise resolving with the stored data object.
+ */
+const waitForProfileData = (iframeWin, key) => {
+  return new Cypress.Promise((resolve) => {
+    const checkStored = () => {
+      iframeWin.chrome.storage.local.get(key).then((stored) => {
+        if (stored[key] && stored[key].fullName) {
+          resolve(stored);
+        } else {
+          setTimeout(checkStored, 50);
+        }
+      });
+    };
+    checkStored();
+  });
+};
 
 describe("Extension Data Parser E2E", () => {
+  let storage;
+  let tabQueryCountRef;
+
   beforeEach(() => {
-    tabQueryCountRef.count = 0;
+    storage = {};
+    tabQueryCountRef = { count: 0 };
+
     cy.fixture("mockProfile.html").as("mockHtml");
     cy.readFile("content.js").as("contentScript");
 
@@ -102,120 +232,84 @@ describe("Extension Data Parser E2E", () => {
     ).as("mxCheck");
 
     cy.on("window:before:load", (win) => {
-      stubChromeAPI(win, storage, linkedinUrl, tabQueryCountRef);
+      stubChromeAPI({ win, storageObj: storage, linkedinUrl, tabRef: tabQueryCountRef });
     });
   });
 
-  it("parses LinkedIn profile and saves data", function () {
-    cy.visit("auth/auth.html");
-    cy.get("#email-login").type("test@example.com");
-    cy.get("#pass-login").type("Super$ecret1");
-    cy.get("#login-btn").click();
-    cy.wait("@loginRequest");
-    cy.url().should("include", "/parse/parse");
+  it("successfully parses LinkedIn profile and saves data", function () {
+    let iframe;
+    let mockIframeUrl;
+    let winRef;
 
-    cy.intercept("GET", linkedinUrl, {
-      statusCode: 200,
-      headers: { "Content-Type": "text/html" },
-      body: this.mockHtml,
-    }).as("linkedinProfile");
-    cy.reload();
-
-    cy.window()
-      .then((win) => {
-        return loadAndRunInIframe(win, this.mockHtml, this.contentScript);
+    cy.visit("auth/auth.html")
+      .then(() => {
+        return login("test@example.com", "Super$ecret1");
       })
-      .then((iframeWin) => {
-        cy.wrap(null).should(() => {
-          return iframeWin.chrome.storage.local
-            .get("profileData")
-            .then((stored) => {
-              expect(stored.profileData)
-                .to.have.property("fullName")
-                .and.be.a("string");
-            });
+      .wait("@loginRequest")
+      .url()
+      .should("include", "/parse/parse")
+      .then(() => {
+        cy.intercept("GET", linkedinUrl, {
+          statusCode: 200,
+          headers: { "Content-Type": "text/html" },
+          body: this.mockHtml,
+        }).as("linkedinProfile");
+      })
+      .reload()
+      .get("#run-btn")
+      .should("be.visible")
+      .then(() => {
+        cy.get("@mockHtml").then((mockHtml) => {
+          cy.window().then((win) => {
+            winRef = win;
+            iframe = createMockIframe(winRef, mockHtml);
+            mockIframeUrl = iframe.contentWindow.location.href;
+            setupChromeOnIframe(iframe.contentWindow, winRef.chrome, MOCK_IFRAME_TAB_ID);
+          });
         });
-      });
-
-    cy.visit("profile/profile.html", {
-      onBeforeLoad(win) {
-        stubWindowClose(win);
-      },
-    });
-
-    // 2) Trigger whatever in your code calls window.close()
-    cy.get("#discard-profile-btn").click();
-
-    // 3) Assert that close() was called
-    cy.get("@closeWindow").should("have.been.called");
-
-    // 4) If your code relies on window.closed afterwards, verify it’s now true:
-    cy.window().its("closed").should("be.true");
-
-    cy.visit("parse/parse.html");
-    cy.get("#logout-btn").click();
+      })
+      .get("#run-btn")
+      .click()
+      .then(() => {
+        return waitForProfileData(iframe.contentWindow, "profileData");
+      })
+      .then((stored) => {
+        expect(stored.profileData).to.have.property("fullName").and.be.a("string");
+      })
+      .visit("profile/profile.html", {
+        onBeforeLoad(win) {
+          stubWindowClose(win);
+        },
+      })
+      .get("#discard-profile-btn")
+      .click()
+      .get("@closeWindow")
+      .should("have.been.called")
+      .window()
+      .its("closed")
+      .should("be.true")
+      .visit("parse/parse.html")
+      .get("#logout-btn")
+      .click();
   });
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function switchToRegister() {
-  cy.contains("button, a", "Register").click();
-
-  // cy.get("#tab-register").click();
-  cy.get("#form-register").should("not.have.class", "hidden");
-  cy.get("#form-login").should("have.class", "hidden");
-}
-
-// Helper to switch to the Login tab
-function switchToLogin() {
-  cy.get("#tab-login").click();
-  cy.get("#form-login").should("not.have.class", "hidden");
-  cy.get("#form-register").should("have.class", "hidden");
-}
-
-// Helper to fill and submit registration
-function fillAndSubmitRegistration(email, password, confirmPassword) {
-  switchToRegister();
-  cy.get("#email-reg").clear().type(email);
-  cy.get("#pass-reg").clear().type(password);
-  cy.get("#pass-confirm").clear().type(confirmPassword);
-  cy.get("#register-btn").click();
-}
-
-// Helper to fill and submit login
-function fillAndSubmitLogin(email, password) {
-  switchToLogin();
-  cy.get("#email-login").clear().type(email);
-  cy.get("#pass-login").clear().type(password);
-  cy.get("#login-btn").click();
-}
-
 describe("Combined Auth Page (Login + Registration)", () => {
+  let storage;
+  let tabQueryCountRef;
+
   beforeEach(() => {
+    storage = {};
+    tabQueryCountRef = { count: 0 };
+
     cy.on("window:before:load", (win) => {
-      stubChromeAPI(win, storage, linkedinUrl, tabQueryCountRef);
+      stubChromeAPI({ win, storageObj: storage, linkedinUrl, tabRef: tabQueryCountRef });
     });
-    // Visit the real combined auth page
     cy.visit("auth/auth.html");
 
-    // Stub MX lookup for any valid domain
     cy.intercept(
       { method: "GET", url: /cloudflare-dns\.com\/dns-query.*type=MX/ },
       (req) => {
-        // If URL contains “invalid.com”, return 404
         if (req.url.includes("invalid.com")) {
           req.reply({ statusCode: 404 });
         } else {
@@ -227,7 +321,6 @@ describe("Combined Auth Page (Login + Registration)", () => {
       }
     ).as("mxLookup");
 
-    // Stub registration endpoint
     cy.intercept("POST", "http://localhost:3000/api/register", (req) => {
       const { email } = req.body;
       if (email === "duplicate@example.com") {
@@ -240,7 +333,6 @@ describe("Combined Auth Page (Login + Registration)", () => {
       }
     }).as("registerRequest");
 
-    // Stub login endpoint
     cy.intercept("POST", "http://localhost:3000/api/login", (req) => {
       const { email, password } = req.body;
       if (email === "user@example.com" && password === "CorrectPass1!") {
@@ -256,49 +348,29 @@ describe("Combined Auth Page (Login + Registration)", () => {
 
   context("Registration Flow", () => {
     it("registers successfully with valid email and matching passwords", () => {
-      fillAndSubmitRegistration(
-        "newuser@example.com",
-        "ValidPass1!",
-        "ValidPass1!"
-      );
-      // MX lookup fires once for “newuser@example.com”
-      cy.wait("@mxLookup");
-
-      // Then registration request
-      cy.wait("@registerRequest");
-
-      // Success message appears and form should toggle back to login
-      cy.get(".success-message")
+      register("newuser@example.com", "ValidPass1!", "ValidPass1!");
+      cy.wait("@mxLookup")
+        .wait("@registerRequest")
+        .get(".success-message")
         .should("be.visible")
-        .and("contain.text", "Registered! Redirecting…");
-
-      // After registration, page logic might switch to login tab
-      // (If your code does a tab-switch on success.)
-      switchToLogin();
-      cy.get("#form-login").should("not.have.class", "hidden");
-      cy.get("#email-login").should("have.value", "newuser@example.com");
+        .and("contain.text", "Registered! Redirecting…")
+        .then(() => {
+          switchToLogin();
+          cy.get("#form-login").should("not.have.class", "hidden");
+          cy.get("#email-login").should("have.value", "newuser@example.com");
+        });
     });
 
     it("shows error when email domain has no MX record", () => {
-      fillAndSubmitRegistration(
-        "user@invalid.com",
-        "ValidPass1!",
-        "ValidPass1!"
-      );
-      // MX lookup for invalid.com returns 404
-      cy.wait("@mxLookup");
-      cy.get("#register-error")
+      register("user@invalid.com", "ValidPass1!", "ValidPass1!");
+      cy.wait("@mxLookup")
+        .get("#register-error")
         .should("be.visible")
         .and("contain.text", "Invalid email domain");
     });
 
     it("shows error when passwords do not match", () => {
-      fillAndSubmitRegistration(
-        "user@example.com",
-        "ValidPass1!",
-        "WrongPass1!"
-      );
-      // Because passwords mismatch, MX and register endpoints should not be called
+      register("user@example.com", "ValidPass1!", "WrongPass1!");
       cy.get("#register-error")
         .should("be.visible")
         .and("contain.text", "Passwords do not match");
@@ -306,17 +378,10 @@ describe("Combined Auth Page (Login + Registration)", () => {
     });
 
     it("shows error when email is already registered", () => {
-      fillAndSubmitRegistration(
-        "duplicate@example.com",
-        "ValidPass1!",
-        "ValidPass1!"
-      );
-      // MX lookup fires
-      cy.wait("@mxLookup");
-      // Registration fires and returns 409
-      cy.wait("@registerRequest");
-
-      cy.get("#register-error")
+      register("duplicate@example.com", "ValidPass1!", "ValidPass1!");
+      cy.wait("@mxLookup")
+        .wait("@registerRequest")
+        .get("#register-error")
         .should("be.visible")
         .and("contain.text", "Email already registered");
     });
@@ -324,30 +389,31 @@ describe("Combined Auth Page (Login + Registration)", () => {
 
   context("Login Flow", () => {
     it("logs in successfully with correct credentials", () => {
-      fillAndSubmitLogin("user@example.com", "CorrectPass1!");
-      // Login endpoint should be called
-      cy.wait("@loginRequest");
-      // Assert navigation to dashboard page
-      cy.url().should("include", "parse");
-      cy.get("#logout-btn").click();
-      cy.location('pathname').should('include', '/auth/auth');
+      login("user@example.com", "CorrectPass1!");
+      cy.wait("@loginRequest")
+        .url()
+        .should("include", "parse")
+        .get("#logout-btn")
+        .click()
+        .location("pathname")
+        .should("include", "/auth/auth");
     });
+
     it("shows error with incorrect credentials", () => {
-      fillAndSubmitLogin("user@example.com", "WrongPass1!");
-      cy.wait("@loginRequest");
-      cy.get("#login-error")
+      login("user@example.com", "WrongPass1!");
+      cy.wait("@loginRequest")
+        .get("#login-error")
         .should("be.visible")
-        .and("contain.text", "Invalid credentials");
-      // Ensure the login form remains visible
-      cy.get("#form-login").should("not.have.class", "hidden");
+        .and("contain.text", "Invalid credentials")
+        .get("#form-login")
+        .should("not.have.class", "hidden");
     });
+
     it("shows validation error for empty fields", () => {
-      // Leave both fields blank
-      cy.get("#login-btn").click();
-      cy.get("#login-error")
+      cy.get("#login-btn").click()
+        .get("#login-error")
         .should("be.visible")
         .and("contain.text", "Invalid email format");
-      // The login endpoint should not be called
       cy.get("@loginRequest.all").should("have.length", 0);
     });
   });

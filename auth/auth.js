@@ -16,7 +16,6 @@ const registerError = document.getElementById("register-error");
 
 export async function initPopup() {
   try {
-    console.log("inside auth.js")
     const { token } = await chrome.storage.local.get("token");
     const { profileData } = await chrome.storage.local.get("profileData");
     if (profileData) {

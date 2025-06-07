@@ -8,7 +8,7 @@
   },
   "type": "module",
   "scripts": {
-    "serve-ext": "http-server extension -p 8080",
+    "test:e2e": "concurrently --success first --kill-others \"npx serve -l 1234\" \"npx cypress run\"",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "repository": {
