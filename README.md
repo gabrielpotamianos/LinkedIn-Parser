@@ -4,7 +4,7 @@ This project is a Chrome extension that can be used to parse relevant data of a 
 # LinkedIn Parser Chrome Extension
 
 **Version:** 1.0.0  
-**Author:** Your Name  
+**Author:** gabri.da.dev
 **Date:** 2025-05-09
 
 ---
@@ -114,64 +114,38 @@ flowchart LR
 
 ## Project Structure
 
+
+//TODO - update structure
 ```
-extension/
-├─ auth/
-│  ├─ auth.html
-│  ├─ auth.css
-│  └─ auth.js
-├─ profile/
-│  ├─ profile.html
-│  ├─ profile.css
-│  └─ profile.js
-├─ shared/
-│  ├─ api.js
-│  ├─ themes.js
-│  ├─ ui.js
-│  ├─ validation.js
-│  └─ (other utilities)
-├─ content.js
-├─ background.js
-├─ manifest.json
-└─ README.md
+📁 extension/
+├── 📁 .github/
+│   └── 📁 workflows/
+├── 📁 auth/
+├── 📁 cypress/
+├── 📁 icons/
+├── 📁 parse/
+├── 📁 profile/
+├── 📁 shared/
+├── 📁 tests/
+│   ├── 📁 auth/
+│   ├── 📁 fixtures/
+│   ├── 📁 profile/
+│   └── 📁 shared/
+├── 📄 background.test.js
+├── 📄 content.test.js
+├── 📄 .gitignore
+├── 📄 background.js
+├── 📄 content.js
+├── 📄 cypress.config.js
+├── 📄 jest.config.mjs
+├── 📄 manifest.json
+├── 📄 package-lock.json
+├── 📄 package.json
+└── 📄 README.md
 ```
 
----
 
-## Coding Conventions
 
-- **Separation of concerns**: Each module handles a single responsibility.  
-- **JSDoc comments** on all public functions & modules.  
-- **No magic numbers**; CSS variables for colors/spacings.  
-- **Async/Await** for all async flows; Promises in `typeWriter`.  
-- **Error handling**: `.catch` blocks on messaging & storage calls.
-
----
-
-## Testing
-
-- **Manual**: Use Chrome DevTools network & storage inspectors.  
-- **Unit**: Stub out `chrome.*` APIs in Jest with `jest-chrome` (future).  
-- **Integration**: Automated E2E via Puppeteer (long-term roadmap).
-
----
-
-## Troubleshooting
-
-- **Content script not running**: Ensure `manifest.json` has correct `host_permissions` & use `chrome.scripting.executeScript`.  
-- **Storage empty**: Inspect `chrome.storage.local` in the service worker DevTools.  
-- **Animation jitter**: Adjust the `typeWriter` delay or use parallel execution (already implemented).
-
----
-
-## Contributing
-
-1. Fork & branch: `git checkout -b feat/new-parser`  
-2. Commit: `git commit -m "feat(parser): add new section logic"`  
-3. Push & PR: `git push origin feat/new-parser` → Open a Pull Request  
-4. Review & merge after CI ✅  
-
----
 
 ## License
 
