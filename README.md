@@ -48,31 +48,32 @@ The **LinkedIn Parser** Chrome extension automates extraction of public LinkedIn
 
 
 ```
-📁 extension/
-├── 📁 .github/
-│   └── 📁 workflows/
-├── 📁 auth/
-├── 📁 cypress/
-├── 📁 icons/
-├── 📁 parse/
-├── 📁 profile/
-├── 📁 shared/
-├── 📁 tests/
-│   ├── 📁 auth/
-│   ├── 📁 fixtures/
-│   ├── 📁 profile/
-│   └── 📁 shared/
-├── 📄 background.test.js
-├── 📄 content.test.js
-├── 📄 .gitignore
-├── 📄 background.js
-├── 📄 content.js
-├── 📄 cypress.config.js
-├── 📄 jest.config.mjs
-├── 📄 manifest.json
-├── 📄 package-lock.json
-├── 📄 package.json
-└── 📄 README.md
+extension/
+  ├── .github/            # [CONFIG] CI workflows
+  ├── auth/               # [COMPONENT] Auth module
+  ├── cypress/            # [TESTS] 
+  │   ├── downloads/      # [TESTS] 
+  │   ├── e2e/            # [TESTS] End-to-end specs
+  │   └── fixtures/       # [TESTS] Mock data
+  ├── icons/              # [COMPONENT] 
+  ├── parse/              # [COMPONENT] Parsing trigger
+  ├── profile/            # [COMPONENT] Profile module
+  ├── shared/             # [COMPONENT] Shared utils
+  ├── tests/              # [TESTS] Unit tests
+  │   ├── auth/           # [TESTS] Auth tests
+  │   ├── fixtures/       # [TESTS] Fixture tests
+  │   ├── profile/        # [TESTS] Profile tests
+  │   └── shared/         # [TESTS] Shared tests
+  ├── background.test.js  # [TESTS] Background tests
+  ├── content.test.js     # [TESTS] Content tests
+  ├── .gitignore          # [CONFIG] 
+  ├── background.js       # [COMPONENT] Background script
+  ├── content.js          # [COMPONENT] Content script
+  ├── cypress.config.js   # [CONFIG] Cypress setup
+  ├── jest.config.mjs     # [CONFIG] Jest settings
+  ├── manifest.json       # [CONFIG] Extension manifest
+  ├── package.json        # [CONFIG] Dependencies list
+  └── README.md           # [CONFIG] Project overview
 ```
 
 
