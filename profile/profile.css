@@ -25,9 +25,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Roboto, sans-serif;
+  font-family: "Segoe UI", Roboto, sans-serif;
 }
-
 
 body {
   width: 360px;
@@ -122,6 +121,14 @@ body {
   background: var(--input-bg);
   color: var(--text);
   font-size: 1rem;
+}
+
+.skills-placeholder {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #888;
+  font-style: italic;
+  margin-top: 0.5rem;
 }
 
 textarea {

@@ -17,7 +17,6 @@
 let profile = null;
 let scrapeSkills = null;
 
-
 (async () => {
   // ── UTILITIES ────────────────────────────────────────────────────────────────
 
@@ -93,7 +92,7 @@ let scrapeSkills = null;
     // Locate the About section anchor and its containing <section>
     const aboutSection = document.querySelector("#about")?.closest("section");
     if (!aboutSection) return "";
-    
+
     // Some profiles hide long text behind "see more"
     const moreToggle = aboutSection.querySelector(
       'div[class*="inline-show-more-text"]'
@@ -266,6 +265,7 @@ let scrapeSkills = null;
           .filter((s) => s && !/^Skills|Endorsed|\d+$|others?$/i.test(s))
       )
     );
+    console.log(skills);
     return skills;
   }
 
@@ -294,7 +294,7 @@ let scrapeSkills = null;
       }
     });
 
-      // Ensure test globals are set
+  // Ensure test globals are set
   window.profile = profile;
   window.scrapeSkills = scrapeSkills;
 })();

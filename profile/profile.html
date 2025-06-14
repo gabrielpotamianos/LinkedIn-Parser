@@ -1,66 +1,90 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="profile.css" />
-  <title>LinkedIn Profile Data</title>
-</head>
-<body>
-  <div class="card" id="app-section">
-    <div class="theme-toggle">
-      <span>🌙</span>
-      <input type="checkbox" id="theme-switch" />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="profile.css" />
+    <title>LinkedIn Profile Data</title>
+  </head>
+  <body>
+    <div class="card" id="app-section">
+      <div class="theme-toggle">
+        <span>🌙</span>
+        <input type="checkbox" id="theme-switch" />
+      </div>
+
+      <header>
+        <h1 class="center">Profile Data</h1>
+      </header>
+
+      <div class="field">
+        <label for="url-label">URL</label>
+        <div class="hide-on-empty">
+          <input type="text hide-on-empty" id="url" readonly />
+        </div>
+        <div class="skills-placeholder" style="display: none;">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="fullName-label">Full Name</label>
+        <div class="hide-on-empty">
+          <input type="text hide-on-empty" id="fullName" readonly />
+        </div>
+        <div class="skills-placeholder" style="display: none">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="headline-label">Headline</label>
+        <div class="hide-on-empty">
+          <input type="text hide-on-empty" id="headline" readonly />
+        </div>
+        <div class="skills-placeholder" style="display: none">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="location-label">Location</label>
+        <div class="hide-on-empty">
+          <input type="text hide-on-empty" id="location" readonly />
+        </div>
+        <div class="skills-placeholder" style="display: none">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="about-label">About</label>
+        <div class="hide-on-empty">
+          <textarea id="about" rows="4" readonly></textarea>
+        </div>
+        <div class="skills-placeholder" style="display: none">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="experience-label">Experience</label>
+        <div class="hide-on-empty">
+          <div class="list-container" id="experience"></div>
+        </div>
+        <div class="skills-placeholder" style="display: none">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="education-label">Education</label>
+        <div class="hide-on-empty">
+          <div class="list-container" id="education"></div>
+        </div>
+        <div class="skills-placeholder" style="display: none">Not found</div>
+      </div>
+
+      <div class="field">
+        <label for="skills-label">Skills</label>
+        <div class="hide-on-empty">
+          <textarea id="skills" rows="3" readonly></textarea>
+        </div>
+        <div class="skills-placeholder">Not found</div>
+      </div>
+
+      <button type="button" id="save-candidate-btn">Save Candidate</button>
+      <button type="button" id="discard-profile-btn">Discard</button>
+
+      <script type="module" src="profile.js"></script>
     </div>
-
-    <header>
-      <h1 class="center">Profile Data</h1>
-    </header>
-
-    <div class="field">
-      <label for="url">URL</label>
-      <input type="text" id="url" readonly />
-    </div>
-
-    <div class="field">
-      <label for="fullName">Full Name</label>
-      <input type="text" id="fullName" readonly />
-    </div>
-
-    <div class="field">
-      <label for="headline">Headline</label>
-      <input type="text" id="headline" readonly />
-    </div>
-
-    <div class="field">
-      <label for="location">Location</label>
-      <input type="text" id="location" readonly />
-    </div>
-
-    <div class="field">
-      <label for="about">About</label>
-      <textarea id="about" rows="4" readonly></textarea>
-    </div>
-
-    <div class="field">
-      <label for="experience">Experience</label>
-      <div class="list-container" id="experience"></div>
-    </div>
-
-    <div class="field">
-      <label for="education">Education</label>
-      <div class="list-container" id="education"></div>
-    </div>
-
-    <div class="field">
-      <label for="skills">Skills</label>
-      <textarea id="skills" rows="3" readonly></textarea>
-    </div>
-
-    <button type="button" id="save-candidate-btn">Save Candidate</button>
-    <button type="button" id="discard-profile-btn">Discard</button>
-
-    <script type="module" src="profile.js"></script>
-  </div>
-</body>
+  </body>
 </html>

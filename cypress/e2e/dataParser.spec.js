@@ -219,6 +219,7 @@ describe("Extension Data Parser E2E", () => {
     tabQueryCountRef = { count: 0 };
 
     cy.fixture("mockProfile.html").as("mockHtml");
+    cy.fixture("mockProfileMissingData.html").as("mockHtmlMissingData");
     cy.readFile("content.js").as("contentScript");
 
     cy.intercept("POST", "http://localhost:3000/api/login", {
@@ -238,7 +239,6 @@ describe("Extension Data Parser E2E", () => {
 
   it("successfully parses LinkedIn profile and saves data", function () {
     let iframe;
-    let mockIframeUrl;
     let winRef;
 
     cy.visit("auth/auth.html")
@@ -263,7 +263,6 @@ describe("Extension Data Parser E2E", () => {
           cy.window().then((win) => {
             winRef = win;
             iframe = createMockIframe(winRef, mockHtml);
-            mockIframeUrl = iframe.contentWindow.location.href;
             setupChromeOnIframe(iframe.contentWindow, winRef.chrome, MOCK_IFRAME_TAB_ID);
           });
         });
@@ -281,6 +280,71 @@ describe("Extension Data Parser E2E", () => {
           stubWindowClose(win);
         },
       })
+      .get("#discard-profile-btn")
+      .click()
+      .get("@closeWindow")
+      .should("have.been.called")
+      .window()
+      .its("closed")
+      .should("be.true")
+      .visit("parse/parse.html")
+      .get("#logout-btn")
+      .click();
+  });
+
+    it("successfully parses LinkedIn profile WITH MISSING DATA  and saves data", function () {
+    let iframe;
+    let winRef;
+
+    cy.visit("auth/auth.html")
+      .then(() => {
+        return login("test@example.com", "Super$ecret1");
+      })
+      .wait("@loginRequest")
+      .url()
+      .should("include", "/parse/parse")
+      .then(() => {
+        cy.intercept("GET", linkedinUrl, {
+          statusCode: 200,
+          headers: { "Content-Type": "text/html" },
+          body: this.mockHtmlMissingData,
+        }).as("linkedinProfile");
+      })
+      .reload()
+      .get("#run-btn")
+      .should("be.visible")
+      .then(() => {
+        cy.get("@mockHtmlMissingData").then((mockHtmlMissingData) => {
+          cy.window().then((win) => {
+            winRef = win;
+            iframe = createMockIframe(winRef, mockHtmlMissingData);
+            setupChromeOnIframe(iframe.contentWindow, winRef.chrome, MOCK_IFRAME_TAB_ID);
+          });
+        });
+      })
+      .get("#run-btn")
+      .click()
+      .then(() => {
+        return waitForProfileData(iframe.contentWindow, "profileData");
+      })
+      .then((stored) => {
+        expect(stored.profileData).to.have.property("fullName").and.be.a("string");
+        expect(stored.profileData).to.have.property("about").and.be.a("string");
+        expect(stored.profileData).to.have.property("experience").that.is.an("array").that.is.empty;
+        expect(stored.profileData).to.have.property("education").that.is.an("array");
+        expect(stored.profileData).to.have.property("skills").that.is.an("array");
+        expect(stored.profileData).to.have.property("location").and.be.a("string");
+        expect(stored.profileData).to.have.property("headline").and.be.a("string");
+      })
+      .visit("profile/profile.html", {
+        onBeforeLoad(win) {
+          stubWindowClose(win);
+        },
+      })
+      .get(".skills-placeholder")
+      .should('be.visible')
+      .get("#experience")
+      .should('not.be.visible')
       .get("#discard-profile-btn")
       .click()
       .get("@closeWindow")

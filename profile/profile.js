@@ -1,14 +1,10 @@
 // profile/profile.js
 import * as themes from "../shared/themes.js";
 
-/** 
+/**
  * =========================
  *        Utilities
  * =========================
- */
-
-/**
- * Helper methods for DOM creation and animation.
  */
 
 /**
@@ -19,7 +15,7 @@ import * as themes from "../shared/themes.js";
  * @param {number} [delay=50] - Delay in milliseconds between each character.
  * @returns {Promise<void>} Resolves when animation completes.
  */
-export function typeWriter(el, text, delay = 50) {
+export function typeWriter(el, text, delay = 6) {
   return new Promise((resolve) => {
     if (window.skipAnimations) {
       el.value = text;
@@ -53,6 +49,11 @@ export function createReadOnlyInput(className = "", value = "") {
   return input;
 }
 
+const TextareaFields = {
+  SKILLS: "skills",
+  ABOUT: "about",
+};
+
 /**
  * Creates a read-only input with specified text, appends it to a container,
  * and pushes its typing animation promise into the animations array.
@@ -70,7 +71,7 @@ export function animateInput(container, className, text, animations) {
   return input;
 }
 
-/** 
+/**
  * =========================
  *        Rendering
  * =========================
@@ -167,7 +168,7 @@ export async function renderProfile(profileData) {
     );
   }
 
-  /** 
+  /**
    * =========================
    *     Event Listeners
    * =========================
@@ -187,6 +188,42 @@ export async function renderProfile(profileData) {
       await chrome.storage.local.remove("profileData");
       window.close();
     });
+
+  // Hide empty fields based on profileData keys
+  Object.keys(profileData).forEach((field) => {
+    const el = document.getElementById(field);
+    if (!el) return;
+
+    const container = el.closest(".hide-on-empty");
+    const placeholder = container?.nextElementSibling;
+    let isEmpty;
+
+    if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+      if (field === "skills") {
+        if (Array.isArray(profileData[field])) {
+          isEmpty = profileData[field].length === 0;
+        }
+      } else {
+          isEmpty = !profileData[field].trim();
+        }
+    } else if (el.tagName === "UL" || el.tagName === "OL") {
+      console.log("got here idk what is this")
+      isEmpty = field.children.length === 0;
+    } else {
+      const val = profileData[field];
+      isEmpty =
+        !val ||
+        (Array.isArray(val) ? val.length === 0 : !val.toString().trim());
+    }
+
+    console.log(
+      "final Test from field [" + field + "] ----------->",
+      profileData
+    );
+
+    if (container) container.style.display = isEmpty ? "none" : "";
+    if (placeholder) placeholder.style.display = isEmpty ? "" : "none";
+  });
 
   await Promise.all(animations);
 }
