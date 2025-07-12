@@ -265,7 +265,6 @@ let scrapeSkills = null;
           .filter((s) => s && !/^Skills|Endorsed|\d+$|others?$/i.test(s))
       )
     );
-    console.log(skills);
     return skills;
   }
 

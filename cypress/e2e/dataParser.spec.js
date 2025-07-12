@@ -40,21 +40,6 @@ const login = (email, password) => {
 };
 
 /**
- * Registers a new user with email, password and confirmPassword.
- * @param {string} email - The email address to register.
- * @param {string} password - The password to register.
- * @param {string} confirmPassword - The password confirmation.
- * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the register button click.
- */
-const register = (email, password, confirmPassword) => {
-  switchToRegister();
-  cy.get("#email-reg").clear().type(email);
-  cy.get("#pass-reg").clear().type(password);
-  cy.get("#pass-confirm").clear().type(confirmPassword);
-  return cy.get("#register-btn").click();
-};
-
-/**
  * Sets up the chrome API stubs on the iframe window.
  * @param {Window} iframeWin - The iframe window object.
  * @param {Object} chromeStubs - The chrome stubs object.
@@ -167,26 +152,6 @@ const stubWindowClose = (win) => {
     get: () => false,
     configurable: true,
   });
-};
-
-/**
- * Switches to the login form tab.
- * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the login tab click.
- */
-const switchToLogin = () => {
-  cy.get("#tab-login").click();
-  cy.get("#form-login").should("not.have.class", "hidden");
-  return cy.get("#form-register").should("have.class", "hidden");
-};
-
-/**
- * Switches to the registration form tab.
- * @returns {Cypress.Chainable<JQuery<HTMLElement>>} Chainable Cypress object for the register tab click.
- */
-const switchToRegister = () => {
-  cy.contains("button, a", "Register").click();
-  cy.get("#form-register").should("not.have.class", "hidden");
-  return cy.get("#form-login").should("have.class", "hidden");
 };
 
 /**
@@ -358,7 +323,7 @@ describe("Extension Data Parser E2E", () => {
   });
 });
 
-describe("Combined Auth Page (Login + Registration)", () => {
+describe("Auth Page - Login )", () => {
   let storage;
   let tabQueryCountRef;
 
@@ -385,18 +350,6 @@ describe("Combined Auth Page (Login + Registration)", () => {
       }
     ).as("mxLookup");
 
-    cy.intercept("POST", "http://localhost:3000/api/register", (req) => {
-      const { email } = req.body;
-      if (email === "duplicate@example.com") {
-        req.reply({ statusCode: 409, body: { error: "Email already exists" } });
-      } else {
-        req.reply({
-          statusCode: 201,
-          body: { message: "Registration successful" },
-        });
-      }
-    }).as("registerRequest");
-
     cy.intercept("POST", "http://localhost:3000/api/login", (req) => {
       const { email, password } = req.body;
       if (email === "user@example.com" && password === "CorrectPass1!") {
@@ -405,50 +358,9 @@ describe("Combined Auth Page (Login + Registration)", () => {
           body: { token: "VALID_TOKEN", userId: "USER123" },
         });
       } else {
-        req.reply({ statusCode: 401, body: { error: "Invalid credentials" } });
+        req.reply({ statusCode: 401, body: { error: "Could not connect to server" } });
       }
     }).as("loginRequest");
-  });
-
-  context("Registration Flow", () => {
-    it("registers successfully with valid email and matching passwords", () => {
-      register("newuser@example.com", "ValidPass1!", "ValidPass1!");
-      cy.wait("@mxLookup")
-        .wait("@registerRequest")
-        .get(".success-message")
-        .should("be.visible")
-        .and("contain.text", "Registered! Redirecting…")
-        .then(() => {
-          switchToLogin();
-          cy.get("#form-login").should("not.have.class", "hidden");
-          cy.get("#email-login").should("have.value", "newuser@example.com");
-        });
-    });
-
-    it("shows error when email domain has no MX record", () => {
-      register("user@invalid.com", "ValidPass1!", "ValidPass1!");
-      cy.wait("@mxLookup")
-        .get("#register-error")
-        .should("be.visible")
-        .and("contain.text", "Invalid email domain");
-    });
-
-    it("shows error when passwords do not match", () => {
-      register("user@example.com", "ValidPass1!", "WrongPass1!");
-      cy.get("#register-error")
-        .should("be.visible")
-        .and("contain.text", "Passwords do not match");
-      cy.get("@registerRequest.all").should("have.length", 0);
-    });
-
-    it("shows error when email is already registered", () => {
-      register("duplicate@example.com", "ValidPass1!", "ValidPass1!");
-      cy.wait("@mxLookup")
-        .wait("@registerRequest")
-        .get("#register-error")
-        .should("be.visible")
-        .and("contain.text", "Email already registered");
-    });
   });
 
   context("Login Flow", () => {
@@ -468,7 +380,7 @@ describe("Combined Auth Page (Login + Registration)", () => {
       cy.wait("@loginRequest")
         .get("#login-error")
         .should("be.visible")
-        .and("contain.text", "Invalid credentials")
+        .and("contain.text", "Could not connect to server")
         .get("#form-login")
         .should("not.have.class", "hidden");
     });

@@ -115,6 +115,13 @@ body {
   border-bottom: 3px solid transparent;
 }
 
+#tab-register {
+  cursor: not-allowed;
+}
+.disbaled-tab {
+  font-size: 0.75rem;
+}
+
 .tabs button:hover {
   opacity: 1;
 }
@@ -210,7 +217,6 @@ button[type="button"]:active {
 }
 
 #login-btn,
-#register-btn,
 #run-btn {
   background: var(--accent-dark);
   color: #fff;
@@ -221,8 +227,7 @@ button[type="button"]:active {
   color: #fff;
 }
 
-#login-error,
-#register-error {
+#login-error {
   color: var(--danger);
   font-size: 0.85rem;
   text-align: center;

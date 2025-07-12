@@ -207,7 +207,6 @@ export async function renderProfile(profileData) {
           isEmpty = !profileData[field].trim();
         }
     } else if (el.tagName === "UL" || el.tagName === "OL") {
-      console.log("got here idk what is this")
       isEmpty = field.children.length === 0;
     } else {
       const val = profileData[field];
@@ -215,11 +214,6 @@ export async function renderProfile(profileData) {
         !val ||
         (Array.isArray(val) ? val.length === 0 : !val.toString().trim());
     }
-
-    console.log(
-      "final Test from field [" + field + "] ----------->",
-      profileData
-    );
 
     if (container) container.style.display = isEmpty ? "none" : "";
     if (placeholder) placeholder.style.display = isEmpty ? "" : "none";

@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 // Load and extract the <body> contents from the mockHtml.html fixture
 const rawHtml = fs.readFileSync(
-  path.resolve(__dirname, "../fixtures/authMock.html"),
+  path.resolve(__dirname, "../fixtures/../../auth/auth.html"),
   "utf8"
 );
 const bodyMatch = rawHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
@@ -56,11 +56,6 @@ describe("Popup HTML elements", () => {
     expect(document.getElementById("form-login")).toBeTruthy();
     expect(document.getElementById("login-btn")).toBeTruthy();
   });
-
-  test("registration form and button are present", () => {
-    expect(document.getElementById("form-register")).toBeTruthy();
-    expect(document.getElementById("register-btn")).toBeTruthy();
-  });
 });
 
 describe("Form input presence", () => {
@@ -68,13 +63,6 @@ describe("Form input presence", () => {
     expect(document.getElementById("email-login")).toBeTruthy();
     expect(document.getElementById("pass-login")).toBeTruthy();
     expect(document.getElementById("login-error")).toBeTruthy();
-  });
-
-  test("register input fields exist", () => {
-    expect(document.getElementById("email-reg")).toBeTruthy();
-    expect(document.getElementById("pass-reg")).toBeTruthy();
-    expect(document.getElementById("pass-confirm")).toBeTruthy();
-    expect(document.getElementById("register-error")).toBeTruthy();
   });
 
   test("tab buttons exist", () => {
@@ -93,14 +81,6 @@ describe("Keydown event handling", () => {
     const spy = jest.spyOn(loginBtn, "click");
     const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
     document.getElementById("email-login").dispatchEvent(event);
-    expect(spy).toHaveBeenCalled();
-  });
-
-  test("pressing Enter on register form triggers register button click", () => {
-    const regBtn = document.getElementById("register-btn");
-    const spy = jest.spyOn(regBtn, "click");
-    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
-    document.getElementById("email-reg").dispatchEvent(event);
     expect(spy).toHaveBeenCalled();
   });
 });
